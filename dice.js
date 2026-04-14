@@ -16,7 +16,8 @@ const sheetState = {
   attrs: {},   // e.g. { str: 3, dex: 2, int: 4, ... }
   skills: {},  // e.g. { search: 2, art: 1, ... }
   globals: {}, // e.g. { name, health, healthMax, defense, will }
-  equipment: []
+  equipment: [],
+  statuses: []
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -96,6 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 10) Equipment block and modal
   setupEquipment();
+
+  // 11) Buff & debuff block and modal
+  setupStatuses();
 });
 
 function setupResultModal() {
@@ -365,6 +369,209 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function setupStatuses() {
+  const openBtn = document.getElementById("open-status-modal");
+  const closeBtn = document.getElementById("close-status-modal");
+  const cancelBtn = document.getElementById("cancel-status-btn");
+  const backdrop = document.getElementById("status-modal-backdrop");
+  const form = document.getElementById("status-form");
+  const list = document.getElementById("status-list");
+
+  if (!list || !form) return;
+
+  if (openBtn) {
+    openBtn.addEventListener("click", () => openStatusModal());
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeStatusModal);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", closeStatusModal);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeStatusModal);
+  }
+
+  form.addEventListener("submit", onStatusSubmit);
+
+  list.addEventListener("click", (event) => {
+    const actionBtn = event.target.closest("button[data-status-action]");
+    if (!actionBtn) return;
+
+    const id = actionBtn.dataset.id;
+    const action = actionBtn.dataset.statusAction;
+    const item = sheetState.statuses.find((entry) => entry.id === id);
+    if (!item) return;
+
+    if (action === "edit") {
+      openStatusModal(item);
+      return;
+    }
+
+    if (action === "remove") {
+      removeStatus(id);
+    }
+  });
+
+  renderStatusList();
+
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("status-modal");
+    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeStatusModal();
+    }
+  });
+}
+
+function openStatusModal(item = null) {
+  const modal = document.getElementById("status-modal");
+  const title = document.getElementById("status-modal-title");
+  const saveBtn = document.getElementById("save-status-btn");
+  const form = document.getElementById("status-form");
+
+  if (!modal || !form) return;
+
+  populateStatusForm(item);
+
+  if (title) {
+    title.textContent = item ? "Edit Buff / Debuff" : "Add Buff / Debuff";
+  }
+
+  if (saveBtn) {
+    saveBtn.textContent = item ? "Save" : "Save";
+  }
+
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeStatusModal() {
+  const modal = document.getElementById("status-modal");
+  const form = document.getElementById("status-form");
+  const title = document.getElementById("status-modal-title");
+  const saveBtn = document.getElementById("save-status-btn");
+  const idInput = document.getElementById("status-id");
+
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+
+  if (form) {
+    form.reset();
+  }
+
+  if (idInput) {
+    idInput.value = "";
+  }
+
+  if (title) {
+    title.textContent = "Add Buff / Debuff";
+  }
+
+  if (saveBtn) {
+    saveBtn.textContent = "Save";
+  }
+
+  document.body.style.overflow = "";
+}
+
+function populateStatusForm(item) {
+  const idInput = document.getElementById("status-id");
+  const nameInput = document.getElementById("status-name");
+  const detailsInput = document.getElementById("status-details");
+  const durationInput = document.getElementById("status-duration");
+
+  if (!nameInput) return;
+
+  if (!item) {
+    if (idInput) idInput.value = "";
+    nameInput.value = "";
+    if (detailsInput) detailsInput.value = "";
+    if (durationInput) durationInput.value = "1";
+    return;
+  }
+
+  if (idInput) idInput.value = item.id;
+  nameInput.value = item.name || "";
+  if (detailsInput) detailsInput.value = item.details || "";
+  if (durationInput) durationInput.value = item.duration ?? 1;
+}
+
+function onStatusSubmit(event) {
+  event.preventDefault();
+
+  const idInput = document.getElementById("status-id");
+  const nameInput = document.getElementById("status-name");
+  const detailsInput = document.getElementById("status-details");
+  const durationInput = document.getElementById("status-duration");
+
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert("Please enter a buff or debuff name.");
+    return;
+  }
+
+  let duration = parseInt(durationInput?.value || "0", 10);
+  if (Number.isNaN(duration) || duration < 0) duration = 0;
+
+  const existingId = idInput?.value || "";
+  const payload = {
+    id: existingId || `status-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    name,
+    details: detailsInput?.value.trim() || "",
+    duration
+  };
+
+  const existingIndex = sheetState.statuses.findIndex((item) => item.id === payload.id);
+  if (existingIndex >= 0) {
+    sheetState.statuses[existingIndex] = payload;
+  } else {
+    sheetState.statuses.unshift(payload);
+  }
+
+  saveSheetStateToStorage();
+  renderStatusList();
+  closeStatusModal();
+}
+
+function removeStatus(id) {
+  sheetState.statuses = sheetState.statuses.filter((item) => item.id !== id);
+  saveSheetStateToStorage();
+  renderStatusList();
+}
+
+function renderStatusList() {
+  const list = document.getElementById("status-list");
+  if (!list) return;
+
+  if (!Array.isArray(sheetState.statuses) || sheetState.statuses.length === 0) {
+    list.innerHTML = '<p class="equipment-empty">No buffs or debuffs yet.</p>';
+    return;
+  }
+
+  list.innerHTML = sheetState.statuses
+    .map((item) => `
+      <div class="status-item">
+        <div class="equipment-item-info">
+          <span class="equipment-name">${escapeHtml(item.name || "")}</span>
+          <div class="status-preview">
+            <span>Duration: ${escapeHtml(item.duration ?? 0)} turn(s)</span>
+          </div>
+        </div>
+        <div class="status-item-actions">
+          <button type="button" class="status-icon-btn" data-status-action="edit" data-id="${item.id}" aria-label="Edit ${escapeHtml(item.name || "status")}">E</button>
+          <button type="button" class="status-icon-btn equipment-remove-btn" data-status-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "status")}">🗑</button>
+        </div>
+      </div>
+    `)
+    .join("");
 }
 
 // ---------- helpers from your Foundry logic ----------
@@ -1007,7 +1214,8 @@ function saveSheetStateToStorage() {
       skills: sheetState.skills || {},
       hearts,
       globals,
-      equipment: sheetState.equipment || []
+      equipment: sheetState.equipment || [],
+      statuses: sheetState.statuses || []
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1032,6 +1240,7 @@ function loadSheetStateFromStorage() {
     }
     sheetState.globals = data.globals || {};
     sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
+    sheetState.statuses = Array.isArray(data.statuses) ? data.statuses : [];
 
     // restore header fields
     const globalMap = [

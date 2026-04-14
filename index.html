@@ -363,6 +363,77 @@
         </div>
       </div>
 
+      <div class="status-block">
+        <div class="equipment-header">
+          <div class="equipment-title-row">
+            <h3 class="sheet-section-title equipment-title">Buff &amp; Debuff</h3>
+            <button
+              type="button"
+              id="open-status-modal"
+              class="equipment-add-btn"
+              aria-haspopup="dialog"
+              aria-controls="status-modal"
+              onclick="openStatusModal()"
+            >
+              + Add Buff / Debuff
+            </button>
+          </div>
+        </div>
+
+        <div id="status-list" class="status-list">
+          <p class="equipment-empty">No buffs or debuffs yet.</p>
+        </div>
+      </div>
+
+      <div
+        id="status-modal"
+        class="result-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="status-modal-title"
+      >
+        <div class="result-modal-backdrop" id="status-modal-backdrop"></div>
+        <div class="result-modal-panel equipment-modal-panel">
+          <div class="result-modal-header">
+            <h2 id="status-modal-title">Add Buff / Debuff</h2>
+            <button
+              type="button"
+              id="close-status-modal"
+              class="result-modal-close"
+              aria-label="Close buff and debuff form"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="result-modal-body">
+            <form id="status-form" class="equipment-form">
+              <input type="hidden" id="status-id">
+
+              <label class="equipment-field" for="status-name">
+                <span>Name :</span>
+                <input type="text" id="status-name" required>
+              </label>
+
+              <label class="equipment-field" for="status-details">
+                <span>Details :</span>
+                <textarea id="status-details" rows="4"></textarea>
+              </label>
+
+              <label class="equipment-field" for="status-duration">
+                <span>Duration :</span>
+                <input type="number" id="status-duration" min="0" value="1">
+              </label>
+
+              <div class="equipment-form-actions">
+                <button type="submit" id="save-status-btn">Save</button>
+                <button type="button" id="cancel-status-btn">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== Attributes ===== -->
       <h3 class="sheet-section-title">Attributes</h3>
       <p class="sheet-subtitle">
