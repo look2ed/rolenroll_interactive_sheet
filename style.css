@@ -443,7 +443,7 @@ button:hover {
 }
 
 .status-block-top .equipment-title-row {
-  align-items: baseline;
+  align-items: center;
 }
 
 .equipment-add-btn {
@@ -480,7 +480,7 @@ button:hover {
 
 .status-block-top {
   margin-bottom: 0;
-  padding-top: 3.1rem;
+  padding-top: 2.2rem;
 }
 
 .status-list {
@@ -520,6 +520,16 @@ button:hover {
   border: 1px solid #dfd3c1;
   border-radius: 8px;
   background: #fbf8f1;
+}
+
+.status-item-buff {
+  background: #eef8ef;
+  border-color: #c9dfc9;
+}
+
+.status-item-debuff {
+  background: #fceeee;
+  border-color: #e6c2c2;
 }
 
 .equipment-item-info {
@@ -579,15 +589,17 @@ button:hover {
   font-size: 1rem;
   font-weight: 700;
   line-height: 1;
+  background: #f5f2eb;
+  border-color: #b8b0a2;
 }
 
 .equipment-remove-btn {
-  background: #f8e4df;
-  border-color: #c98c7c;
+  background: #f7ece8;
+  border-color: #cfb1a7;
 }
 
 .equipment-remove-btn:hover {
-  background: #f1d2ca;
+  background: #f1ddd7;
 }
 
 .equipment-modal-panel {
@@ -614,7 +626,8 @@ button:hover {
 }
 
 .equipment-field[for="equipment-name"],
-.equipment-field[for="equipment-description"] {
+.equipment-field[for="equipment-description"],
+.status-type-field {
   grid-column: 1 / -1;
 }
 
@@ -662,6 +675,37 @@ button:hover {
 #equipment-modal input[type="number"],
 #equipment-modal textarea {
   min-width: 0;
+}
+
+.status-type-toggle {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.status-type-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #cdbfa9;
+  border-radius: 999px;
+  background: #f7f1e8;
+  font-weight: 600;
+}
+
+.status-type-option input {
+  margin: 0;
+}
+
+.status-type-buff {
+  background: #edf8ee;
+  border-color: #bfd9c2;
+}
+
+.status-type-debuff {
+  background: #fceeee;
+  border-color: #e2c0c0;
 }
 
 @media (max-width: 700px) {

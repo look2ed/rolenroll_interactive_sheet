@@ -485,6 +485,7 @@ function populateStatusForm(item) {
   const nameInput = document.getElementById("status-name");
   const detailsInput = document.getElementById("status-details");
   const durationInput = document.getElementById("status-duration");
+  const typeInputs = document.querySelectorAll('input[name="status-type"]');
 
   if (!nameInput) return;
 
@@ -493,6 +494,9 @@ function populateStatusForm(item) {
     nameInput.value = "";
     if (detailsInput) detailsInput.value = "";
     if (durationInput) durationInput.value = "1";
+    typeInputs.forEach((input) => {
+      input.checked = input.value === "buff";
+    });
     return;
   }
 
@@ -500,6 +504,9 @@ function populateStatusForm(item) {
   nameInput.value = item.name || "";
   if (detailsInput) detailsInput.value = item.details || "";
   if (durationInput) durationInput.value = item.duration ?? 1;
+  typeInputs.forEach((input) => {
+    input.checked = input.value === (item.type || "buff");
+  });
 }
 
 function onStatusSubmit(event) {
@@ -509,6 +516,7 @@ function onStatusSubmit(event) {
   const nameInput = document.getElementById("status-name");
   const detailsInput = document.getElementById("status-details");
   const durationInput = document.getElementById("status-duration");
+  const selectedType = document.querySelector('input[name="status-type"]:checked');
 
   if (!nameInput) return;
 
@@ -526,7 +534,8 @@ function onStatusSubmit(event) {
     id: existingId || `status-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     name,
     details: detailsInput?.value.trim() || "",
-    duration
+    duration,
+    type: selectedType?.value === "debuff" ? "debuff" : "buff"
   };
 
   const existingIndex = sheetState.statuses.findIndex((item) => item.id === payload.id);
@@ -558,7 +567,7 @@ function renderStatusList() {
 
   list.innerHTML = sheetState.statuses
     .map((item) => `
-      <div class="status-item">
+      <div class="status-item status-item-${item.type === "debuff" ? "debuff" : "buff"}">
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="status-preview">
