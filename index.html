@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="color-scheme" content="light">
   <title>Role & Roll Interactive Character Sheet</title>
-  <link rel="stylesheet" href="style.css?v=4.11.12">
+  <link rel="stylesheet" href="style.css?v=4.11.13">
 </head>
 <body>
   <header class="page-header">
@@ -21,7 +21,7 @@
       <div id="sheet-tabs" class="sheet-tabs" aria-label="Character sheets"></div>
       <button type="button" id="new-sheet-btn" class="sheet-tab-add" aria-label="Add new character sheet" title="Add new character">+</button>
     </div>
-    <div class="version-badge">v4.11.12</div>
+    <div class="version-badge">v4.11.13</div>
   </header>
 
   <div class="layout">
@@ -348,11 +348,11 @@
 
               <div class="equipment-field equipment-dependency-field">
                 <div class="equipment-dependency-header">
-                  <span>Stat Dependencies :</span>
+                  <span>Related Stat(s) :</span>
                   <button type="button" id="open-extra-skill-dependency-modal" class="mini-add-btn">+ Add</button>
                 </div>
                 <div id="extra-skill-dependency-list" class="equipment-dependency-list">
-                  <p class="equipment-empty equipment-empty-inline">No stat dependencies selected.</p>
+                  <p class="equipment-empty equipment-empty-inline">No related stat(s) selected.</p>
                 </div>
               </div>
 
@@ -383,7 +383,7 @@
         <div class="result-modal-backdrop" id="extra-skill-dependency-modal-backdrop"></div>
         <div class="result-modal-panel equipment-modal-panel">
           <div class="result-modal-header">
-            <h2 id="extra-skill-dependency-modal-title">Select Stat Dependencies</h2>
+            <h2 id="extra-skill-dependency-modal-title">Select Related Stat(s)</h2>
             <button
               type="button"
               id="close-extra-skill-dependency-modal"
@@ -604,11 +604,11 @@
 
               <div class="equipment-field equipment-dependency-field">
                 <div class="equipment-dependency-header">
-                  <span>Stat Dependencies :</span>
+                  <span>Related Stat(s) :</span>
                   <button type="button" id="open-equipment-dependency-modal" class="mini-add-btn">+ Add</button>
                 </div>
                 <div id="equipment-dependency-list" class="equipment-dependency-list">
-                  <p class="equipment-empty equipment-empty-inline">No stat dependencies selected.</p>
+                  <p class="equipment-empty equipment-empty-inline">No related stat(s) selected.</p>
                 </div>
               </div>
 
@@ -651,7 +651,7 @@
         <div class="result-modal-backdrop" id="equipment-dependency-modal-backdrop"></div>
         <div class="result-modal-panel equipment-modal-panel">
           <div class="result-modal-header">
-            <h2 id="equipment-dependency-modal-title">Select Stat Dependencies</h2>
+            <h2 id="equipment-dependency-modal-title">Select Related Stat(s)</h2>
             <button
               type="button"
               id="close-equipment-dependency-modal"
@@ -1675,6 +1675,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=4.11.12"></script>
+  <script src="dice.js?v=4.11.13"></script>
 </body>
 </html>

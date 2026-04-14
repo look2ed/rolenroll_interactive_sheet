@@ -758,7 +758,7 @@ function renderEquipmentDependencyList() {
   if (!container) return;
 
   if (!equipmentDependencySelection.length) {
-    container.innerHTML = '<p class="equipment-empty equipment-empty-inline">No stat dependencies selected.</p>';
+    container.innerHTML = '<p class="equipment-empty equipment-empty-inline">No related stat(s) selected.</p>';
     return;
   }
 
@@ -916,7 +916,7 @@ function getEquipmentRollSuccessBonus(item) {
 function rollEquipment(item) {
   const totalDice = getEquipmentRollDice(item);
   if (totalDice <= 0) {
-    alert("This equipment has no usable stat dependencies yet. Add stat dependencies and make sure those stats have points.");
+    alert("This equipment has no usable related stat(s) yet. Add related stat(s) and make sure those stats have points.");
     return;
   }
 
@@ -987,7 +987,7 @@ function renderEquipmentList() {
                   .filter(Boolean)
                   .map((option) => `<span class="dependency-chip">${escapeHtml(option.label)}</span>`)
                   .join("")
-              : '<span class="equipment-dependency-empty">No stat dependencies</span>'}
+              : '<span class="equipment-dependency-empty">No related stat(s)</span>'}
           </div>
         </div>
         <div class="equipment-item-actions">
@@ -1698,7 +1698,7 @@ function renderExtraSkillDependencyList() {
   if (!container) return;
 
   if (!extraSkillDependencySelection.length) {
-    container.innerHTML = '<p class="equipment-empty equipment-empty-inline">No stat dependencies selected.</p>';
+    container.innerHTML = '<p class="equipment-empty equipment-empty-inline">No related stat(s) selected.</p>';
     return;
   }
 
@@ -1834,7 +1834,7 @@ function rollExtraSkill(item) {
   const dependencyDice = getDependencyRollDice(item.dependencies);
   const totalDice = ownLevel + dependencyDice;
   if (totalDice <= 0) {
-    alert("This extra skill has no dice yet. Increase its level or add stat dependencies with points.");
+    alert("This extra skill has no dice yet. Increase its level or add related stat(s) with points.");
     return;
   }
 
@@ -1883,7 +1883,7 @@ function renderExtraSkillList() {
                   .filter(Boolean)
                   .map((option) => `<span class="dependency-chip">${escapeHtml(option.label)}</span>`)
                   .join("")
-              : '<span class="equipment-dependency-empty">No stat dependencies</span>'}
+              : '<span class="equipment-dependency-empty">No related stat(s)</span>'}
           </div>
         </div>
         <div class="extra-skill-actions">
