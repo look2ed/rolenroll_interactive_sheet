@@ -294,7 +294,7 @@ button:hover {
   flex-direction: column;
   gap: 0.18rem;
   align-self: flex-start;
-  margin-top: 0.1rem;
+  margin-top: -0.15rem;
 }
 
 .item-side-btn {
