@@ -100,7 +100,7 @@ h1 {
   border-right-width: 0;
   border-radius: 0;
   background: #f4f1ea;
-  color: #332d25;
+  color: #7a7469;
   font-size: 0.98rem;
   font-weight: 600;
   line-height: 1.1;
@@ -113,9 +113,15 @@ h1 {
   border-top-left-radius: 6px;
 }
 
+.sheet-tab:last-child {
+  border-right-width: 1px;
+  border-top-right-radius: 6px;
+}
+
 .sheet-tab.is-active {
   background: #ffffff;
   border-bottom-color: #ffffff;
+  color: #111111;
   position: relative;
   z-index: 1;
 }
