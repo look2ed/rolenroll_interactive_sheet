@@ -438,6 +438,8 @@ button:hover {
 }
 
 .status-block-top .equipment-title {
+  margin-top: 0;
+  margin-bottom: 0;
   border-top: none;
   padding-top: 0;
 }
