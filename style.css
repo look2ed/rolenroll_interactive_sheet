@@ -363,10 +363,21 @@ button:hover {
 }
 
 .sheet-top-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 1.25rem;
   align-items: start;
+}
+
+.sheet-top-layout > .sheet-top-fields {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sheet-top-layout > .status-block-top {
+  flex: 0 0 360px;
+  min-width: 320px;
 }
 
 .sheet-row {
@@ -643,7 +654,13 @@ button:hover {
 
 @media (max-width: 700px) {
   .sheet-top-layout {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+  }
+
+  .sheet-top-layout > .status-block-top {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
   }
 
   .equipment-item {
@@ -678,6 +695,7 @@ button:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.15rem;
+  max-width: 230px;
 }
 
 .mental-heart {
@@ -691,6 +709,10 @@ button:hover {
   cursor: pointer;
   font-size: 16px;
   line-height: 20px;
+}
+
+.sheet-row:has(.mental-hearts) {
+  align-items: flex-start;
 }
 
 /* by default use :before, JS just toggles .on / .off */
