@@ -1552,8 +1552,10 @@ function renderExtraSkillList() {
       <div class="extra-skill-card">
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
-          <div class="extra-skill-level-display">LV. ${escapeHtml(String(item.level ?? 0))}</div>
-          ${item.profession ? '<div class="extra-skill-profession-badge">✓ Profession</div>' : ""}
+          <div class="extra-skill-meta-row">
+            <div class="extra-skill-level-display">LV. ${escapeHtml(String(item.level ?? 0))}</div>
+            ${item.profession ? '<div class="extra-skill-profession-badge">PRO</div>' : ""}
+          </div>
           <div class="extra-skill-dots">
             ${Array.from({ length: 6 }, (_, index) => {
               const dotIndex = index + 1;

@@ -281,6 +281,11 @@ button:hover {
   background: #fbf8f1;
 }
 
+.extra-skill-card .equipment-item-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .item-main {
   flex: 1;
   min-width: 0;
@@ -297,15 +302,25 @@ button:hover {
 .extra-skill-dots {
   display: flex;
   gap: 0.25rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 .extra-skill-card-dot {
   margin-top: 0;
 }
 
-.extra-skill-level-display {
+.extra-skill-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   margin: 0.15rem 0 0.2rem;
+  flex-wrap: wrap;
+}
+
+.extra-skill-level-display {
+  margin: 0;
   color: #6f675b;
   font-size: 0.9rem;
   font-weight: 700;
@@ -314,15 +329,15 @@ button:hover {
 .extra-skill-profession-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  margin: 0.2rem 0 0.25rem;
-  padding: 0.15rem 0.55rem;
+  margin: 0;
+  padding: 0.1rem 0.45rem;
   border: 1px solid #b8c9b0;
   border-radius: 999px;
   background: #eef6e9;
   color: #4f6945;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .profession-field {
@@ -401,11 +416,23 @@ button:hover {
   gap: 0.45rem;
   flex-wrap: nowrap;
   margin-top: 0.15rem;
+  flex: 0 0 auto;
 }
 
 .extra-skill-actions .equipment-roll-btn,
 .extra-skill-actions .icon-action-btn {
   margin-top: 0;
+}
+
+.extra-skill-card .equipment-dependency-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.extra-skill-card .dependency-chip {
+  white-space: nowrap;
 }
 
 /* ===== Manual / help ===== */
