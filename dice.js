@@ -192,6 +192,28 @@ function setupEquipment() {
     }
   });
 
+  list.addEventListener("input", (event) => {
+    const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
+    if (!input) return;
+
+    updateEquipmentNumberField(
+      input.dataset.equipmentId,
+      input.dataset.equipmentField,
+      input.value
+    );
+  });
+
+  list.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
+    if (!input) return;
+
+    updateEquipmentNumberField(
+      input.dataset.equipmentId,
+      input.dataset.equipmentField,
+      input.value
+    );
+  });
+
   renderEquipmentList();
 
   document.addEventListener("keydown", (event) => {
@@ -271,8 +293,8 @@ function populateEquipmentForm(item) {
     if (descriptionInput) descriptionInput.value = "";
     if (dmgInput) dmgInput.value = "";
     if (chargeInput) chargeInput.value = "0";
-    if (defInput) defInput.value = "";
-    if (toughnessInput) toughnessInput.value = "";
+    if (defInput) defInput.value = "0";
+    if (toughnessInput) toughnessInput.value = "0";
     return;
   }
 
@@ -281,8 +303,8 @@ function populateEquipmentForm(item) {
   if (descriptionInput) descriptionInput.value = item.description || "";
   if (dmgInput) dmgInput.value = item.dmg || "";
   if (chargeInput) chargeInput.value = item.charge ?? 0;
-  if (defInput) defInput.value = item.def || "";
-  if (toughnessInput) toughnessInput.value = item.toughness || "";
+  if (defInput) defInput.value = item.def ?? 0;
+  if (toughnessInput) toughnessInput.value = item.toughness ?? 0;
 }
 
 function onEquipmentSubmit(event) {
@@ -306,6 +328,10 @@ function onEquipmentSubmit(event) {
 
   let charge = parseInt(chargeInput?.value || "0", 10);
   if (Number.isNaN(charge) || charge < 0) charge = 0;
+  let def = parseInt(defInput?.value || "0", 10);
+  if (Number.isNaN(def) || def < 0) def = 0;
+  let toughness = parseInt(toughnessInput?.value || "0", 10);
+  if (Number.isNaN(toughness) || toughness < 0) toughness = 0;
 
   const existingId = idInput?.value || "";
   const payload = {
@@ -314,8 +340,8 @@ function onEquipmentSubmit(event) {
     description: descriptionInput?.value.trim() || "",
     dmg: dmgInput?.value.trim() || "",
     charge,
-    def: defInput?.value.trim() || "",
-    toughness: toughnessInput?.value.trim() || ""
+    def,
+    toughness
   };
 
   const existingIndex = sheetState.equipment.findIndex((item) => item.id === payload.id);
@@ -336,6 +362,19 @@ function removeEquipment(id) {
   renderEquipmentList();
 }
 
+function updateEquipmentNumberField(id, field, value) {
+  const item = sheetState.equipment.find((entry) => entry.id === id);
+  if (!item) return;
+
+  if (!["charge", "def", "toughness"].includes(field)) return;
+
+  let nextValue = parseInt(value ?? "0", 10);
+  if (Number.isNaN(nextValue) || nextValue < 0) nextValue = 0;
+
+  item[field] = nextValue;
+  saveSheetStateToStorage();
+}
+
 function renderEquipmentList() {
   const list = document.getElementById("equipment-list");
   if (!list) return;
@@ -352,9 +391,18 @@ function renderEquipmentList() {
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="equipment-preview">
             <span>DMG: ${escapeHtml(item.dmg || "-")}</span>
-            <span>Charge: ${escapeHtml(item.charge ?? 0)}</span>
-            <span>DEF: ${escapeHtml(item.def || "-")}</span>
-            <span>Toughness: ${escapeHtml(item.toughness || "-")}</span>
+            <label class="equipment-number-inline">
+              <span>Charge</span>
+              <input type="number" min="0" value="${escapeHtml(item.charge ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="charge" aria-label="Charge for ${escapeHtml(item.name || "equipment")}">
+            </label>
+            <label class="equipment-number-inline">
+              <span>DEF</span>
+              <input type="number" min="0" value="${escapeHtml(item.def ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="def" aria-label="DEF for ${escapeHtml(item.name || "equipment")}">
+            </label>
+            <label class="equipment-number-inline">
+              <span>Toughness</span>
+              <input type="number" min="0" value="${escapeHtml(item.toughness ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="toughness" aria-label="Toughness for ${escapeHtml(item.name || "equipment")}">
+            </label>
           </div>
         </div>
         <div class="equipment-item-actions">
@@ -841,14 +889,16 @@ function renderItemList() {
             <span class="equipment-name">${escapeHtml(item.name || "")}</span>
             <div class="item-amount-row">
               <span class="item-amount-label">Amount</span>
-              <input
-                type="number"
-                min="0"
-                value="${escapeHtml(item.amount ?? 0)}"
-                class="item-amount-input"
-                data-item-amount-id="${item.id}"
-                aria-label="Amount for ${escapeHtml(item.name || "item")}"
-              >
+              <span class="item-amount-control">
+                <input
+                  type="number"
+                  min="0"
+                  value="${escapeHtml(item.amount ?? 0)}"
+                  class="item-amount-input"
+                  data-item-amount-id="${item.id}"
+                  aria-label="Amount for ${escapeHtml(item.name || "item")}"
+                >
+              </span>
             </div>
           </div>
         </div>

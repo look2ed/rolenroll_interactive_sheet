@@ -269,16 +269,26 @@ button:hover {
   font-weight: 600;
 }
 
+.item-amount-control {
+  display: inline-block;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  flex: 0 0 80px;
+}
+
 .item-amount-input {
-  min-width: 0;
-  width: 40px;
-  max-width: 40px;
-  flex: 0 0 40px;
+  min-width: 80px !important;
+  width: 80px !important;
+  max-width: 80px !important;
+  flex: 0 0 80px !important;
   padding: 0.2rem 0.35rem;
   border: 1px solid #b8b0a2;
   border-radius: 6px;
   font: inherit;
   background: rgba(255, 255, 255, 0.85);
+  display: inline-block;
+  box-sizing: border-box;
 }
 
 .item-side-actions {
@@ -643,6 +653,25 @@ button:hover {
   flex-wrap: wrap;
   font-size: 0.85rem;
   color: #6f675b;
+}
+
+.equipment-number-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: auto;
+  font-size: 0.85rem;
+  color: #6f675b;
+}
+
+.equipment-number-inline input[type="number"] {
+  min-width: 0;
+  width: 72px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #b8b0a2;
+  border-radius: 6px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .status-preview {

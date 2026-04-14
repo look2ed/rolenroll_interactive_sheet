@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Role & Roll Dice Roller</title>
-  <link rel="stylesheet" href="style.css?v=4.7.4">
+  <link rel="stylesheet" href="style.css?v=4.8.0">
 </head>
 <body>
   <h1>Role &amp; Roll Dice Roller</h1>
@@ -447,12 +447,12 @@
 
               <label class="equipment-field" for="equipment-def">
                 <span>DEF :</span>
-                <input type="text" id="equipment-def">
+                <input type="number" id="equipment-def" min="0" value="0">
               </label>
 
               <label class="equipment-field" for="equipment-toughness">
                 <span>Toughness :</span>
-                <input type="text" id="equipment-toughness">
+                <input type="number" id="equipment-toughness" min="0" value="0">
               </label>
 
               <div class="equipment-form-actions">
@@ -1433,6 +1433,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=4.7.4"></script>
+  <script src="dice.js?v=4.8.0"></script>
 </body>
 </html>
