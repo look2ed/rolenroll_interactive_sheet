@@ -33,6 +33,27 @@ h1 {
   padding-top: 0.1rem;
 }
 
+.manual-guide-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.32rem 0.75rem;
+  border: 1px solid #ccb58a;
+  border-radius: 999px;
+  background: #efe4cc;
+  color: #6f5a33;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.manual-guide-link:hover {
+  background: #e7d8b7;
+}
+
 .version-badge {
   position: absolute;
   top: 0;
