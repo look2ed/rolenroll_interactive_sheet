@@ -31,7 +31,7 @@ h1 {
   position: relative;
   margin-bottom: 1.5rem;
   padding-top: 0.1rem;
-  padding-bottom: 2.1rem;
+  padding-bottom: 2.6rem;
 }
 
 .manual-guide-link {
@@ -122,20 +122,20 @@ h1 {
 
 .sheet-tab-add {
   margin-top: 0;
-  width: 54px;
-  min-width: 54px;
-  padding: 0;
-  border: 1px solid #3d6db9;
+  min-width: 56px;
+  padding: 0.62rem 1rem;
+  border: 1px solid #a88c5c;
+  border-left-width: 0;
   border-radius: 0 6px 6px 0;
-  background: #4d82de;
-  color: #ffffff;
-  font-size: 1.35rem;
+  background: #c9b08a;
+  color: #332d25;
+  font-size: 1.2rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .sheet-tab-add:hover {
-  background: #3f73cb;
+  background: #b79a6e;
 }
 
 h2 {
@@ -702,6 +702,60 @@ button:hover {
 
 .sheet-card h2 {
   margin-top: 0;
+}
+
+.character-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.character-info-header h2 {
+  margin-bottom: 0;
+}
+
+.delete-character-btn {
+  margin-top: 0;
+  padding: 0.34rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #cfb1a7;
+  background: #f7ece8;
+  color: #7a4d43;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.delete-character-btn:hover {
+  background: #f1ddd7;
+}
+
+.delete-character-copy,
+.delete-character-name {
+  margin: 0;
+}
+
+.delete-character-name {
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #332d25;
+}
+
+.delete-character-modal-panel {
+  width: min(420px, calc(100vw - 2rem));
+}
+
+.confirm-delete-btn {
+  background: #c57d6a;
+  border-color: #9f5a49;
+  color: #ffffff;
+}
+
+.confirm-delete-btn:hover {
+  background: #af6856;
 }
 
 /* upper info area */

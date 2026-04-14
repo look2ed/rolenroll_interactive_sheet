@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Role & Roll Interactive Character Sheet</title>
-  <link rel="stylesheet" href="style.css?v=4.11.1">
+  <link rel="stylesheet" href="style.css?v=4.11.3">
 </head>
 <body>
   <header class="page-header">
@@ -20,7 +20,7 @@
       <div id="sheet-tabs" class="sheet-tabs" aria-label="Character sheets"></div>
       <button type="button" id="new-sheet-btn" class="sheet-tab-add" aria-label="Add new character sheet">+</button>
     </div>
-    <div class="version-badge">v4.11.1</div>
+    <div class="version-badge">v4.11.3</div>
   </header>
 
   <div class="layout">
@@ -456,7 +456,10 @@
     <!-- ================= RIGHT: CHARACTER SHEET ================= -->
     <div class="sheet-panel sheet-column">
       <div class="sheet-card character-info-card">
-        <h2>Character Info</h2>
+        <div class="character-info-header">
+          <h2>Character Info</h2>
+          <button type="button" id="delete-character-btn" class="delete-character-btn">Delete This Character</button>
+        </div>
 
         <!-- upper section: name, health, defense, will, mental hearts -->
         <div class="sheet-header">
@@ -727,6 +730,38 @@
                 <button type="button" id="cancel-status-btn">Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="delete-character-modal"
+        class="result-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-character-modal-title"
+      >
+        <div class="result-modal-backdrop" id="delete-character-modal-backdrop"></div>
+        <div class="result-modal-panel delete-character-modal-panel">
+          <div class="result-modal-header">
+            <h2 id="delete-character-modal-title">Remove Character</h2>
+            <button
+              type="button"
+              id="close-delete-character-modal"
+              class="result-modal-close"
+              aria-label="Close remove character dialog"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="result-modal-body">
+            <p class="delete-character-copy">Are you sure to remove character</p>
+            <p id="delete-character-name" class="delete-character-name">Untitled Character</p>
+            <div class="equipment-form-actions">
+              <button type="button" id="confirm-delete-character-btn" class="confirm-delete-btn">Confirm</button>
+              <button type="button" id="cancel-delete-character-btn">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1639,6 +1674,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=4.11.1"></script>
+  <script src="dice.js?v=4.11.3"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@ let statOptions = [];
 let equipmentDependencySelection = [];
 let extraSkillDependencySelection = [];
 let extraSkillPointsSelection = 0;
+let deleteCharacterModal;
 
 const LEGACY_STORAGE_KEY = "rolenroll_sheet_state_v1";
 const SHEET_STORAGE_PREFIX = "rolenroll_sheet_state_v2_";
@@ -122,6 +123,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 13) Extra skill block and modal
   setupExtraSkills();
+
+  // 14) Delete character controls
+  setupDeleteCharacterControls();
+  updateDeleteCharacterButton();
 });
 
 function createSheetId() {
@@ -196,6 +201,80 @@ function renderSheetTabs() {
   tabs.innerHTML = sheetDirectory
     .map((sheet) => `<button type="button" class="sheet-tab ${sheet.id === currentSheetId ? "is-active" : ""}" data-sheet-id="${sheet.id}" title="${escapeHtml(getSheetDisplayName(sheet))}">${escapeHtml(getSheetDisplayName(sheet))}</button>`)
     .join("");
+}
+
+function canDeleteCurrentSheet() {
+  return sheetDirectory.length > 1;
+}
+
+function updateDeleteCharacterButton() {
+  const btn = document.getElementById("delete-character-btn");
+  if (!btn) return;
+  btn.disabled = !canDeleteCurrentSheet();
+  btn.title = canDeleteCurrentSheet()
+    ? "Delete this character"
+    : "At least one character tab must remain";
+}
+
+function openDeleteCharacterModal() {
+  if (!canDeleteCurrentSheet()) {
+    alert("At least one character tab must remain.");
+    return;
+  }
+
+  const nameEl = document.getElementById("delete-character-name");
+  if (nameEl) {
+    const currentSheet = sheetDirectory.find((sheet) => sheet.id === currentSheetId);
+    nameEl.textContent = getSheetDisplayName(currentSheet);
+  }
+
+  if (!deleteCharacterModal) return;
+  deleteCharacterModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeDeleteCharacterModal() {
+  if (!deleteCharacterModal) return;
+  deleteCharacterModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function deleteCurrentSheet() {
+  if (!canDeleteCurrentSheet()) return;
+
+  const currentIndex = sheetDirectory.findIndex((sheet) => sheet.id === currentSheetId);
+  if (currentIndex < 0) return;
+
+  const deletedId = currentSheetId;
+  const fallbackSheet = sheetDirectory[currentIndex + 1] || sheetDirectory[currentIndex - 1];
+
+  sheetDirectory = sheetDirectory.filter((sheet) => sheet.id !== deletedId);
+  saveSheetDirectoryToStorage();
+  localStorage.removeItem(getSheetStorageKey(deletedId));
+
+  closeDeleteCharacterModal();
+
+  if (fallbackSheet) {
+    currentSheetId = fallbackSheet.id;
+    sessionStorage.setItem(ACTIVE_SHEET_KEY, currentSheetId);
+    loadSheetStateFromStorage();
+    applySheetStateToUI();
+  }
+}
+
+function setupDeleteCharacterControls() {
+  deleteCharacterModal = document.getElementById("delete-character-modal");
+  const openBtn = document.getElementById("delete-character-btn");
+  const closeBtn = document.getElementById("close-delete-character-modal");
+  const cancelBtn = document.getElementById("cancel-delete-character-btn");
+  const confirmBtn = document.getElementById("confirm-delete-character-btn");
+  const backdrop = document.getElementById("delete-character-modal-backdrop");
+
+  if (openBtn) openBtn.addEventListener("click", openDeleteCharacterModal);
+  if (closeBtn) closeBtn.addEventListener("click", closeDeleteCharacterModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeDeleteCharacterModal);
+  if (confirmBtn) confirmBtn.addEventListener("click", deleteCurrentSheet);
+  if (backdrop) backdrop.addEventListener("click", closeDeleteCharacterModal);
 }
 
 function createNewSheet(initialName = "") {
@@ -274,6 +353,7 @@ function initSheetManager() {
   }
 
   renderSheetTabs();
+  updateDeleteCharacterButton();
 }
 
 function resetSheetState() {
@@ -334,6 +414,7 @@ function applySheetStateToUI() {
   renderItemList();
   renderExtraSkillList();
   renderSheetTabs();
+  updateDeleteCharacterButton();
 }
 
 function switchToSheet(sheetId) {
