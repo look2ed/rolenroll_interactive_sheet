@@ -340,7 +340,13 @@ function renderEquipmentList() {
   list.innerHTML = sheetState.equipment
     .map((item) => `
       <div class="equipment-item">
-        <span class="equipment-name">${escapeHtml(item.name || "")}</span>
+        <div class="equipment-item-info">
+          <span class="equipment-name">${escapeHtml(item.name || "")}</span>
+          <div class="equipment-preview">
+            <span>DMG: ${escapeHtml(item.dmg || "-")}</span>
+            <span>Charge: ${escapeHtml(item.charge ?? 0)}</span>
+          </div>
+        </div>
         <div class="equipment-item-actions">
           <button type="button" data-action="edit" data-id="${item.id}">View / Edit</button>
           <button type="button" class="equipment-remove-btn" data-action="remove" data-id="${item.id}">Remove</button>
