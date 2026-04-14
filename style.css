@@ -48,7 +48,8 @@ h2 {
 /* left = dice panel, right = sheet panel */
 .dice-panel,
 .sheet-panel,
-.items-panel {
+.items-panel,
+.extra-skill-panel {
   background: #ffffff;
   border-radius: 8px;
   padding: 1rem 1.25rem 1.25rem;
@@ -303,6 +304,27 @@ button:hover {
   margin-top: 0;
 }
 
+.extra-skill-level-display {
+  margin: 0.15rem 0 0.2rem;
+  color: #6f675b;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.extra-skill-profession-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.2rem 0 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid #b8c9b0;
+  border-radius: 999px;
+  background: #eef6e9;
+  color: #4f6945;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 .profession-field {
   grid-column: 1 / -1;
 }
@@ -375,9 +397,15 @@ button:hover {
 
 .extra-skill-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.45rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  margin-top: 0.15rem;
+}
+
+.extra-skill-actions .equipment-roll-btn,
+.extra-skill-actions .icon-action-btn {
+  margin-top: 0;
 }
 
 /* ===== Manual / help ===== */
