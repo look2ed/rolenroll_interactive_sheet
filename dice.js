@@ -542,25 +542,47 @@ function getEquipmentRollDice(item) {
 function getEquipmentRollSuccessBonus(item) {
   if (!Array.isArray(item.dependencies) || !item.dependencies.length) return 0;
 
-  let totalBonus = 0;
+  const bonusKeys = new Set();
 
   item.dependencies.forEach((id) => {
     const option = statOptions.find((entry) => entry.id === id);
     if (!option) return;
 
-    const selector =
-      option.role === "skill"
-        ? `.stat-row[data-role="skill"][data-skill="${id}"]`
-        : `.stat-row[data-role="attr"][data-stat="${id}"]`;
+    if (option.role === "attr") {
+      const row = document.querySelector(`.stat-row[data-role="attr"][data-stat="${id}"]`);
+      const checkbox = row?.querySelector(".stat-succeed");
+      if (checkbox?.checked) {
+        bonusKeys.add(`attr:${id}`);
+      }
+      return;
+    }
 
-    const row = document.querySelector(selector);
-    const checkbox = row?.querySelector(".stat-succeed");
-    if (checkbox?.checked) {
-      totalBonus += 1;
+    const skillRow = document.querySelector(`.stat-row[data-role="skill"][data-skill="${id}"]`);
+    const skillCheckbox = skillRow?.querySelector(".stat-succeed");
+    if (skillCheckbox?.checked) {
+      bonusKeys.add(`skill:${id}`);
+    }
+
+    if (option.attr) {
+      const primaryValue = sheetState.attrs[option.attr] || 0;
+      let chosenAttr = option.attr;
+
+      if (option.altAttr) {
+        const altValue = sheetState.attrs[option.altAttr] || 0;
+        if (altValue > primaryValue) {
+          chosenAttr = option.altAttr;
+        }
+      }
+
+      const attrRow = document.querySelector(`.stat-row[data-role="attr"][data-stat="${chosenAttr}"]`);
+      const attrCheckbox = attrRow?.querySelector(".stat-succeed");
+      if (attrCheckbox?.checked) {
+        bonusKeys.add(`attr:${chosenAttr}`);
+      }
     }
   });
 
-  return totalBonus;
+  return bonusKeys.size;
 }
 
 function rollEquipment(item) {
@@ -1692,13 +1714,16 @@ function setupSkillRow(row) {
     const altAttrKey = row.dataset.altAttr || row.dataset.altattr; // e.g. "dex" for Art or Brawl
 
     let attrDice = 0;
+    let chosenAttrKey = primaryAttrKey || "";
     if (primaryAttrKey) {
       const primary = sheetState.attrs[primaryAttrKey] || 0;
       if (altAttrKey) {
         const alt = sheetState.attrs[altAttrKey] || 0;
         attrDice = Math.max(primary, alt); // multi-attr: max(primary, alt)
+        chosenAttrKey = alt > primary ? altAttrKey : primaryAttrKey;
       } else {
         attrDice = primary;
+        chosenAttrKey = primaryAttrKey;
       }
     }
 
@@ -1711,8 +1736,17 @@ function setupSkillRow(row) {
     }
 
     const bonusCheckbox = row.querySelector(".stat-succeed");
-    const statBonus =
-      bonusCheckbox && bonusCheckbox.checked ? 1 : 0;
+    let statBonus = bonusCheckbox && bonusCheckbox.checked ? 1 : 0;
+
+    if (chosenAttrKey) {
+      const attrRow = document.querySelector(
+        `.stat-row[data-role="attr"][data-stat="${chosenAttrKey}"]`
+      );
+      const attrBonusCheckbox = attrRow?.querySelector(".stat-succeed");
+      if (attrBonusCheckbox?.checked) {
+        statBonus += 1;
+      }
+    }
 
     const globalSuccInput = document.getElementById("success");
     const globalPenInput = document.getElementById("penalty");
