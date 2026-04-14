@@ -531,21 +531,20 @@ button:hover {
   box-sizing: border-box;
 }
 
-.item-side-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.18rem;
-  align-self: flex-start;
-  margin-top: -0.1rem;
+.item-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
 }
 
-.item-side-btn {
-  min-width: 30px;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  font-size: 0.8rem;
-  border-radius: 0;
+.item-inline-btn {
+  min-width: 42px;
+  height: 42px;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  font-size: 1.08rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1097,16 +1096,6 @@ button:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.item-side-actions .item-side-btn {
-  min-width: 24px;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-radius: 0;
-  font-size: 0.72rem;
-  line-height: 1;
 }
 
 .equipment-remove-btn {

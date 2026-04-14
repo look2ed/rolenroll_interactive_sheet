@@ -1473,11 +1473,11 @@ function renderItemList() {
         <div class="item-main">
           <div class="equipment-item-info">
             <span class="equipment-name">${escapeHtml(item.name || "")}</span>
-            <div class="item-amount-row">
-              <span class="item-amount-label">Amount</span>
-              <span class="item-amount-control">
-                <input
-                  type="number"
+          <div class="item-amount-row">
+            <span class="item-amount-label">Amount</span>
+            <span class="item-amount-control">
+              <input
+                type="number"
                   min="0"
                   value="${escapeHtml(item.amount ?? 0)}"
                   class="item-amount-input"
@@ -1485,12 +1485,12 @@ function renderItemList() {
                   aria-label="Amount for ${escapeHtml(item.name || "item")}"
                 >
               </span>
+              <div class="item-inline-actions">
+                <button type="button" class="icon-action-btn item-inline-btn" data-item-action="edit" data-id="${item.id}" aria-label="Edit ${escapeHtml(item.name || "item")}">✎</button>
+                <button type="button" class="icon-action-btn equipment-remove-btn item-inline-btn" data-item-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "item")}">⌫</button>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="item-side-actions">
-          <button type="button" class="icon-action-btn item-side-btn" data-item-action="edit" data-id="${item.id}" aria-label="Edit ${escapeHtml(item.name || "item")}">✎</button>
-          <button type="button" class="icon-action-btn equipment-remove-btn item-side-btn" data-item-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "item")}">⌫</button>
         </div>
       </div>
     `)
