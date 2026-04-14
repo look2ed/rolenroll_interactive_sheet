@@ -345,6 +345,8 @@ function renderEquipmentList() {
           <div class="equipment-preview">
             <span>DMG: ${escapeHtml(item.dmg || "-")}</span>
             <span>Charge: ${escapeHtml(item.charge ?? 0)}</span>
+            <span>DEF: ${escapeHtml(item.def || "-")}</span>
+            <span>Toughness: ${escapeHtml(item.toughness || "-")}</span>
           </div>
         </div>
         <div class="equipment-item-actions">

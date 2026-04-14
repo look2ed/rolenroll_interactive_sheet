@@ -400,27 +400,29 @@ button:hover {
 }
 
 .equipment-header {
+  display: block;
+}
+
+.equipment-title-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .equipment-title {
   margin: 0;
   border-top: 1px solid #d0c7b9;
   padding-top: 0.5rem;
-  flex: 1;
 }
 
 .equipment-add-btn {
   margin-top: 0;
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  padding: 0.45rem 0.9rem;
   border-radius: 999px;
-  font-size: 1.35rem;
-  line-height: 1;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  font-weight: 600;
   background: #c9b08a;
   border-color: #a88c5c;
 }
