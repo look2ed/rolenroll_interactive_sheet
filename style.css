@@ -145,6 +145,69 @@ button:hover {
   margin-bottom: 0.25rem;
 }
 
+.result-actions {
+  margin-top: 1rem;
+}
+
+.open-result-modal {
+  margin-top: 0;
+}
+
+.result-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.result-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(27, 20, 12, 0.55);
+}
+
+.result-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(680px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  margin: 1rem auto;
+  background: #fffdf8;
+  border: 1px solid #d5c7b3;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+.result-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1rem 0.5rem;
+}
+
+.result-modal-header h2,
+.result-modal-body h3 {
+  margin: 0;
+}
+
+.result-modal-close {
+  margin-top: 0;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.result-modal-body {
+  padding: 0 1rem 1rem;
+}
+
+.result-modal-body h3 {
+  margin-top: 1rem;
+}
+
 /* ===== Manual / help ===== */
 
 .help-icon {

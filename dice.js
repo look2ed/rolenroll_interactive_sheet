@@ -3,6 +3,10 @@
 // ===============================
 
 let rollHistory = [];
+let resultModal;
+let openResultModalBtn;
+let closeResultModalBtn;
+let resultModalBackdrop;
 
 // key for localStorage
 const STORAGE_KEY = "rolenroll_sheet_state_v1";
@@ -85,7 +89,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 8) Initial history render
   renderHistory();
+
+  // 9) Result modal controls
+  setupResultModal();
 });
+
+function setupResultModal() {
+  resultModal = document.getElementById("result-modal");
+  openResultModalBtn = document.getElementById("open-result-modal");
+  closeResultModalBtn = document.getElementById("close-result-modal");
+  resultModalBackdrop = document.getElementById("result-modal-backdrop");
+
+  if (openResultModalBtn) {
+    openResultModalBtn.addEventListener("click", openResultModal);
+  }
+
+  if (closeResultModalBtn) {
+    closeResultModalBtn.addEventListener("click", closeResultModal);
+  }
+
+  if (resultModalBackdrop) {
+    resultModalBackdrop.addEventListener("click", closeResultModal);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && resultModal && !resultModal.classList.contains("hidden")) {
+      closeResultModal();
+    }
+  });
+}
+
+function openResultModal() {
+  if (!resultModal) return;
+
+  resultModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeResultModal() {
+  if (!resultModal) return;
+
+  resultModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
 
 // ---------- helpers from your Foundry logic ----------
 
@@ -365,43 +411,6 @@ function renderHistory() {
   container.innerHTML = html;
 }
 
-  // result modal toggle
-  const resultModal = document.getElementById("result-modal");
-  const openResultModalBtn = document.getElementById("open-result-modal");
-  const closeResultModalBtn = document.getElementById("close-result-modal");
-  const resultModalBackdrop = document.getElementById("result-modal-backdrop");
-
-  function openResultModal() {
-    if (!resultModal) return;
-    resultModal.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
-  }
-
-  function closeResultModal() {
-    if (!resultModal) return;
-    resultModal.classList.add("hidden");
-    document.body.style.overflow = "";
-  }
-
-  if (openResultModalBtn) {
-    openResultModalBtn.addEventListener("click", openResultModal);
-  }
-
-  if (closeResultModalBtn) {
-    closeResultModalBtn.addEventListener("click", closeResultModal);
-  }
-
-  if (resultModalBackdrop) {
-    resultModalBackdrop.addEventListener("click", closeResultModal);
-  }
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && resultModal && !resultModal.classList.contains("hidden")) {
-      closeResultModal();
-    }
-  });
-
-  
 // ---------- core roll executor (used by form + stats) ----------
 
 function performRoll({ total, specialStr, success = 0, penalty = 0 }) {
@@ -490,6 +499,12 @@ function performRoll({ total, specialStr, success = 0, penalty = 0 }) {
 
   const elTotal = document.getElementById("total-points");
   if (elTotal) elTotal.textContent = finalTotal;
+
+  if (openResultModalBtn) {
+    openResultModalBtn.classList.remove("hidden");
+  }
+
+  openResultModal();
 
   // ---- Add to history ----
   const entry = {
