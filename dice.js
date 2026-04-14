@@ -422,6 +422,20 @@ function setupStatuses() {
     }
   });
 
+  list.addEventListener("input", (event) => {
+    const input = event.target.closest("input[data-status-duration-id]");
+    if (!input) return;
+
+    updateStatusDuration(input.dataset.statusDurationId, input.value);
+  });
+
+  list.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-status-duration-id]");
+    if (!input) return;
+
+    updateStatusDuration(input.dataset.statusDurationId, input.value);
+  });
+
   renderStatusList();
 
   document.addEventListener("keydown", (event) => {
@@ -560,6 +574,17 @@ function removeStatus(id) {
   renderStatusList();
 }
 
+function updateStatusDuration(id, value) {
+  const item = sheetState.statuses.find((entry) => entry.id === id);
+  if (!item) return;
+
+  let duration = parseInt(value ?? "0", 10);
+  if (Number.isNaN(duration) || duration < 0) duration = 0;
+
+  item.duration = duration;
+  saveSheetStateToStorage();
+}
+
 function renderStatusList() {
   const list = document.getElementById("status-list");
   if (!list) return;
@@ -575,7 +600,17 @@ function renderStatusList() {
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="status-preview">
-            <span>Duration: ${escapeHtml(item.duration ?? 0)} turn(s)</span>
+            <label class="status-duration-inline">
+              <span>Duration</span>
+              <input
+                type="number"
+                min="0"
+                value="${escapeHtml(item.duration ?? 0)}"
+                data-status-duration-id="${item.id}"
+                aria-label="Duration for ${escapeHtml(item.name || "status")}"
+              >
+              <span>turn(s)</span>
+            </label>
           </div>
         </div>
         <div class="status-item-actions">

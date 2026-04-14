@@ -661,6 +661,25 @@ button:hover {
   color: #6f675b;
 }
 
+.status-duration-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: auto;
+  font-size: 0.85rem;
+  color: #6f675b;
+}
+
+.status-duration-inline input[type="number"] {
+  min-width: 0;
+  width: 72px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #b8b0a2;
+  border-radius: 6px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
+}
+
 .equipment-item-actions {
   display: flex;
   gap: 0.45rem;
