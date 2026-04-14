@@ -234,7 +234,7 @@
         <div class="sheet-top-fields">
           <div class="sheet-row">
             <label for="char-name">Name</label>
-            <input type="text" id="char-name" placeholder="Character Name">
+            <input type="text" id="char-name" class="char-name-input" placeholder="Character Name">
           </div>
           <div class="sheet-row">
             <label>Health</label>
@@ -273,6 +273,89 @@
               <button type="button" class="mental-heart"></button>
               <button type="button" class="mental-heart"></button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="equipment-block">
+        <div class="equipment-header">
+          <h3 class="sheet-section-title equipment-title">Equipment</h3>
+          <button
+            type="button"
+            id="open-equipment-modal"
+            class="equipment-add-btn"
+            aria-haspopup="dialog"
+            aria-controls="equipment-modal"
+          >
+            +
+          </button>
+        </div>
+
+        <div id="equipment-list" class="equipment-list">
+          <p class="equipment-empty">No equipment yet.</p>
+        </div>
+      </div>
+
+      <div
+        id="equipment-modal"
+        class="result-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="equipment-modal-title"
+      >
+        <div class="result-modal-backdrop" id="equipment-modal-backdrop"></div>
+        <div class="result-modal-panel equipment-modal-panel">
+          <div class="result-modal-header">
+            <h2 id="equipment-modal-title">Add Equipment</h2>
+            <button
+              type="button"
+              id="close-equipment-modal"
+              class="result-modal-close"
+              aria-label="Close equipment form"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="result-modal-body">
+            <form id="equipment-form" class="equipment-form">
+              <input type="hidden" id="equipment-id">
+
+              <label class="equipment-field" for="equipment-name">
+                <span>Name :</span>
+                <input type="text" id="equipment-name" required>
+              </label>
+
+              <label class="equipment-field" for="equipment-description">
+                <span>Description :</span>
+                <textarea id="equipment-description" rows="4"></textarea>
+              </label>
+
+              <label class="equipment-field" for="equipment-dmg">
+                <span>DMG :</span>
+                <input type="text" id="equipment-dmg">
+              </label>
+
+              <label class="equipment-field" for="equipment-charge">
+                <span>Charge :</span>
+                <input type="number" id="equipment-charge" min="0" value="0">
+              </label>
+
+              <label class="equipment-field" for="equipment-def">
+                <span>DEF :</span>
+                <input type="text" id="equipment-def">
+              </label>
+
+              <label class="equipment-field" for="equipment-toughness">
+                <span>Toughness :</span>
+                <input type="text" id="equipment-toughness">
+              </label>
+
+              <div class="equipment-form-actions">
+                <button type="submit" id="save-equipment-btn">Add</button>
+                <button type="button" id="cancel-equipment-btn">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

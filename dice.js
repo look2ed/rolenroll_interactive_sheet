@@ -15,7 +15,8 @@ const STORAGE_KEY = "rolenroll_sheet_state_v1";
 const sheetState = {
   attrs: {},   // e.g. { str: 3, dex: 2, int: 4, ... }
   skills: {},  // e.g. { search: 2, art: 1, ... }
-  globals: {}  // e.g. { name, health, healthMax, defense, will }
+  globals: {}, // e.g. { name, health, healthMax, defense, will }
+  equipment: []
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -92,6 +93,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 9) Result modal controls
   setupResultModal();
+
+  // 10) Equipment block and modal
+  setupEquipment();
 });
 
 function setupResultModal() {
@@ -131,6 +135,228 @@ function closeResultModal() {
 
   resultModal.classList.add("hidden");
   document.body.style.overflow = "";
+}
+
+function setupEquipment() {
+  const openBtn = document.getElementById("open-equipment-modal");
+  const closeBtn = document.getElementById("close-equipment-modal");
+  const cancelBtn = document.getElementById("cancel-equipment-btn");
+  const backdrop = document.getElementById("equipment-modal-backdrop");
+  const form = document.getElementById("equipment-form");
+  const list = document.getElementById("equipment-list");
+
+  if (!list || !form) return;
+
+  if (openBtn) {
+    openBtn.addEventListener("click", () => openEquipmentModal());
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeEquipmentModal);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", closeEquipmentModal);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeEquipmentModal);
+  }
+
+  form.addEventListener("submit", onEquipmentSubmit);
+
+  list.addEventListener("click", (event) => {
+    const actionBtn = event.target.closest("button[data-action]");
+    if (!actionBtn) return;
+
+    const id = actionBtn.dataset.id;
+    const action = actionBtn.dataset.action;
+    const item = sheetState.equipment.find((entry) => entry.id === id);
+    if (!item) return;
+
+    if (action === "edit") {
+      openEquipmentModal(item);
+      return;
+    }
+
+    if (action === "remove") {
+      removeEquipment(id);
+    }
+  });
+
+  renderEquipmentList();
+
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("equipment-modal");
+    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeEquipmentModal();
+    }
+  });
+}
+
+function openEquipmentModal(item = null) {
+  const modal = document.getElementById("equipment-modal");
+  const title = document.getElementById("equipment-modal-title");
+  const saveBtn = document.getElementById("save-equipment-btn");
+  const form = document.getElementById("equipment-form");
+
+  if (!modal || !form) return;
+
+  populateEquipmentForm(item);
+
+  if (title) {
+    title.textContent = item ? "Edit Equipment" : "Add Equipment";
+  }
+
+  if (saveBtn) {
+    saveBtn.textContent = item ? "Save" : "Add";
+  }
+
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeEquipmentModal() {
+  const modal = document.getElementById("equipment-modal");
+  const form = document.getElementById("equipment-form");
+  const title = document.getElementById("equipment-modal-title");
+  const saveBtn = document.getElementById("save-equipment-btn");
+
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+
+  if (form) {
+    form.reset();
+  }
+
+  const idInput = document.getElementById("equipment-id");
+  if (idInput) {
+    idInput.value = "";
+  }
+
+  if (title) {
+    title.textContent = "Add Equipment";
+  }
+
+  if (saveBtn) {
+    saveBtn.textContent = "Add";
+  }
+
+  document.body.style.overflow = "";
+}
+
+function populateEquipmentForm(item) {
+  const idInput = document.getElementById("equipment-id");
+  const nameInput = document.getElementById("equipment-name");
+  const descriptionInput = document.getElementById("equipment-description");
+  const dmgInput = document.getElementById("equipment-dmg");
+  const chargeInput = document.getElementById("equipment-charge");
+  const defInput = document.getElementById("equipment-def");
+  const toughnessInput = document.getElementById("equipment-toughness");
+
+  if (!nameInput) return;
+
+  if (!item) {
+    if (idInput) idInput.value = "";
+    nameInput.value = "";
+    if (descriptionInput) descriptionInput.value = "";
+    if (dmgInput) dmgInput.value = "";
+    if (chargeInput) chargeInput.value = "0";
+    if (defInput) defInput.value = "";
+    if (toughnessInput) toughnessInput.value = "";
+    return;
+  }
+
+  if (idInput) idInput.value = item.id;
+  nameInput.value = item.name || "";
+  if (descriptionInput) descriptionInput.value = item.description || "";
+  if (dmgInput) dmgInput.value = item.dmg || "";
+  if (chargeInput) chargeInput.value = item.charge ?? 0;
+  if (defInput) defInput.value = item.def || "";
+  if (toughnessInput) toughnessInput.value = item.toughness || "";
+}
+
+function onEquipmentSubmit(event) {
+  event.preventDefault();
+
+  const idInput = document.getElementById("equipment-id");
+  const nameInput = document.getElementById("equipment-name");
+  const descriptionInput = document.getElementById("equipment-description");
+  const dmgInput = document.getElementById("equipment-dmg");
+  const chargeInput = document.getElementById("equipment-charge");
+  const defInput = document.getElementById("equipment-def");
+  const toughnessInput = document.getElementById("equipment-toughness");
+
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert("Please enter an equipment name.");
+    return;
+  }
+
+  let charge = parseInt(chargeInput?.value || "0", 10);
+  if (Number.isNaN(charge) || charge < 0) charge = 0;
+
+  const existingId = idInput?.value || "";
+  const payload = {
+    id: existingId || `equip-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    name,
+    description: descriptionInput?.value.trim() || "",
+    dmg: dmgInput?.value.trim() || "",
+    charge,
+    def: defInput?.value.trim() || "",
+    toughness: toughnessInput?.value.trim() || ""
+  };
+
+  const existingIndex = sheetState.equipment.findIndex((item) => item.id === payload.id);
+  if (existingIndex >= 0) {
+    sheetState.equipment[existingIndex] = payload;
+  } else {
+    sheetState.equipment.unshift(payload);
+  }
+
+  saveSheetStateToStorage();
+  renderEquipmentList();
+  closeEquipmentModal();
+}
+
+function removeEquipment(id) {
+  sheetState.equipment = sheetState.equipment.filter((item) => item.id !== id);
+  saveSheetStateToStorage();
+  renderEquipmentList();
+}
+
+function renderEquipmentList() {
+  const list = document.getElementById("equipment-list");
+  if (!list) return;
+
+  if (!Array.isArray(sheetState.equipment) || sheetState.equipment.length === 0) {
+    list.innerHTML = '<p class="equipment-empty">No equipment yet.</p>';
+    return;
+  }
+
+  list.innerHTML = sheetState.equipment
+    .map((item) => `
+      <div class="equipment-item">
+        <span class="equipment-name">${escapeHtml(item.name || "")}</span>
+        <div class="equipment-item-actions">
+          <button type="button" data-action="edit" data-id="${item.id}">View / Edit</button>
+          <button type="button" class="equipment-remove-btn" data-action="remove" data-id="${item.id}">Remove</button>
+        </div>
+      </div>
+    `)
+    .join("");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 // ---------- helpers from your Foundry logic ----------
@@ -772,7 +998,8 @@ function saveSheetStateToStorage() {
       attrs: sheetState.attrs || {},
       skills: sheetState.skills || {},
       hearts,
-      globals
+      globals,
+      equipment: sheetState.equipment || []
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -796,6 +1023,7 @@ function loadSheetStateFromStorage() {
       Object.assign(sheetState.skills, data.skills);
     }
     sheetState.globals = data.globals || {};
+    sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
 
     // restore header fields
     const globalMap = [
