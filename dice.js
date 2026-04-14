@@ -423,7 +423,13 @@ function collectStatOptions() {
       label = row.querySelector(".stat-label")?.textContent?.trim() || id;
     }
 
-    return { id, role, label };
+    return {
+      id,
+      role,
+      label,
+      attr: row.dataset.attr || "",
+      altAttr: row.dataset.altAttr || row.dataset.altattr || ""
+    };
   }).filter((entry) => entry.id);
 }
 
@@ -513,7 +519,20 @@ function getEquipmentRollDice(item) {
     if (option.role === "attr") {
       total += sheetState.attrs[id] || 0;
     } else {
-      total += sheetState.skills[id] || 0;
+      const skillValue = sheetState.skills[id] || 0;
+      let attrDice = 0;
+
+      if (option.attr) {
+        const primary = sheetState.attrs[option.attr] || 0;
+        if (option.altAttr) {
+          const alt = sheetState.attrs[option.altAttr] || 0;
+          attrDice = Math.max(primary, alt);
+        } else {
+          attrDice = primary;
+        }
+      }
+
+      total += skillValue + attrDice;
     }
   });
 
