@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Role & Roll Dice Roller</title>
-  <link rel="stylesheet" href="style.css?v=4.4.0">
+  <link rel="stylesheet" href="style.css?v=4.5.0">
 </head>
 <body>
   <h1>Role &amp; Roll Dice Roller</h1>
@@ -419,16 +419,6 @@
                 <input type="text" id="status-name" required>
               </label>
 
-              <label class="equipment-field" for="status-details">
-                <span>Details :</span>
-                <textarea id="status-details" rows="4"></textarea>
-              </label>
-
-              <label class="equipment-field" for="status-duration">
-                <span>Duration :</span>
-                <input type="number" id="status-duration" min="0" value="1">
-              </label>
-
               <div class="equipment-field status-type-field">
                 <span>Type :</span>
                 <div class="status-type-toggle" role="radiogroup" aria-label="Buff or debuff">
@@ -442,6 +432,16 @@
                   </label>
                 </div>
               </div>
+
+              <label class="equipment-field" for="status-details">
+                <span>Details :</span>
+                <textarea id="status-details" rows="4"></textarea>
+              </label>
+
+              <label class="equipment-field" for="status-duration">
+                <span>Duration :</span>
+                <input type="number" id="status-duration" min="0" value="1">
+              </label>
 
               <div class="equipment-form-actions">
                 <button type="submit" id="save-status-btn">Save</button>
@@ -1351,6 +1351,6 @@
     </div>
   </div>
 
-  <script src="dice.js?v=4.4.0"></script>
+  <script src="dice.js?v=4.5.0"></script>
 </body>
 </html>
