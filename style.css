@@ -24,7 +24,27 @@ body {
 
 h1 {
   text-align: center;
+  margin: 0;
+}
+
+.page-header {
+  position: relative;
   margin-bottom: 1.5rem;
+  padding-top: 0.1rem;
+}
+
+.version-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid #ccb58a;
+  border-radius: 999px;
+  background: #efe4cc;
+  color: #6f5a33;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 h2 {
