@@ -19,6 +19,7 @@ const STORAGE_KEY = "rolenroll_sheet_state_v1";
 const sheetState = {
   attrs: {},   // e.g. { str: 3, dex: 2, int: 4, ... }
   skills: {},  // e.g. { search: 2, art: 1, ... }
+  successChecks: {},
   globals: {}, // e.g. { name, health, healthMax, defense, will }
   equipment: [],
   statuses: [],
@@ -2055,6 +2056,16 @@ function setupStats() {
   if (!statRows.length) return;
 
   statRows.forEach((row) => {
+    const bonusCheckbox = row.querySelector(".stat-succeed");
+    const successKey = getStatSuccessKey(row);
+    if (bonusCheckbox && successKey) {
+      bonusCheckbox.checked = !!sheetState.successChecks[successKey];
+      bonusCheckbox.addEventListener("change", () => {
+        sheetState.successChecks[successKey] = bonusCheckbox.checked;
+        saveSheetStateToStorage();
+      });
+    }
+
     const role = row.dataset.role || "attr";
 
     if (role === "skill") {
@@ -2066,6 +2077,15 @@ function setupStats() {
 }
 
 // --- helpers for attributes and skills ---
+
+function getStatSuccessKey(row) {
+  if (!row) return "";
+  const role = row.dataset.role || "attr";
+  if (role === "skill") {
+    return `skill:${row.dataset.skill || row.dataset.stat || ""}`;
+  }
+  return `attr:${row.dataset.stat || ""}`;
+}
 
 function setupAttrRow(row) {
   const key = row.dataset.stat;
@@ -2249,6 +2269,7 @@ function saveSheetStateToStorage() {
     const payload = {
       attrs: sheetState.attrs || {},
       skills: sheetState.skills || {},
+      successChecks: sheetState.successChecks || {},
       hearts,
       globals,
       equipment: sheetState.equipment || [],
@@ -2276,6 +2297,9 @@ function loadSheetStateFromStorage() {
     }
     if (data.skills && typeof data.skills === "object") {
       Object.assign(sheetState.skills, data.skills);
+    }
+    if (data.successChecks && typeof data.successChecks === "object") {
+      Object.assign(sheetState.successChecks, data.successChecks);
     }
     sheetState.globals = data.globals || {};
     sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
