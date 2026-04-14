@@ -9,6 +9,19 @@ body {
   background: #f4f1e9;
 }
 
+.site-footer {
+  margin: 2rem auto 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d0c7b9;
+  font-size: 0.85rem;
+  color: #6f675b;
+  text-align: center;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
 h1 {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -256,37 +269,14 @@ button:hover {
   font-weight: 600;
 }
 
-.item-stepper {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid #d6c7ae;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #f6f1e8;
-}
-
-.item-step-btn {
-  margin-top: 0;
-  min-width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: #e9dfcf;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.item-step-btn:hover {
-  background: #deceb7;
-}
-
-.item-amount-value {
-  min-width: 28px;
-  padding: 0 0.45rem;
-  text-align: center;
-  font-weight: 700;
-  color: #2c241a;
+.item-amount-input {
+  min-width: 0;
+  width: 72px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #b8b0a2;
+  border-radius: 6px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .item-side-actions {

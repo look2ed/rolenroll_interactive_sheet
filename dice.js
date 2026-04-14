@@ -668,14 +668,20 @@ function setupItems() {
       return;
     }
 
-    if (actionBtn.dataset.itemAction === "decrease") {
-      changeItemAmount(id, -1);
-      return;
-    }
+  });
 
-    if (actionBtn.dataset.itemAction === "increase") {
-      changeItemAmount(id, 1);
-    }
+  list.addEventListener("input", (event) => {
+    const input = event.target.closest("input[data-item-amount-id]");
+    if (!input) return;
+
+    updateItemAmount(input.dataset.itemAmountId, input.value);
+  });
+
+  list.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-item-amount-id]");
+    if (!input) return;
+
+    updateItemAmount(input.dataset.itemAmountId, input.value);
   });
 
   document.addEventListener("keydown", (event) => {
@@ -801,14 +807,15 @@ function onItemSubmit(event) {
   closeItemModal();
 }
 
-function changeItemAmount(id, delta) {
+function updateItemAmount(id, value) {
   const item = sheetState.items.find((entry) => entry.id === id);
   if (!item) return;
 
-  const next = Math.max(0, Number(item.amount || 0) + delta);
-  item.amount = next;
+  let amount = parseInt(value ?? "0", 10);
+  if (Number.isNaN(amount) || amount < 0) amount = 0;
+
+  item.amount = amount;
   saveSheetStateToStorage();
-  renderItemList();
 }
 
 function removeItem(id) {
@@ -834,11 +841,14 @@ function renderItemList() {
             <span class="equipment-name">${escapeHtml(item.name || "")}</span>
             <div class="item-amount-row">
               <span class="item-amount-label">Amount</span>
-              <div class="item-stepper">
-                <button type="button" class="item-step-btn" data-item-action="decrease" data-id="${item.id}" aria-label="Decrease ${escapeHtml(item.name || "item")}">−</button>
-                <span class="item-amount-value">${escapeHtml(item.amount ?? 0)}</span>
-                <button type="button" class="item-step-btn" data-item-action="increase" data-id="${item.id}" aria-label="Increase ${escapeHtml(item.name || "item")}">+</button>
-              </div>
+              <input
+                type="number"
+                min="0"
+                value="${escapeHtml(item.amount ?? 0)}"
+                class="item-amount-input"
+                data-item-amount-id="${item.id}"
+                aria-label="Amount for ${escapeHtml(item.name || "item")}"
+              >
             </div>
           </div>
         </div>
