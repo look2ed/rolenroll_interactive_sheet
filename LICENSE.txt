@@ -1,23 +1,18 @@
-Copyright (c) 2025 BGN Squad
+Copyright (c) 2025 BGN Squad & Panisara Thepthong
 
+This project is an unofficial, fan-made Interactive Character Sheet and Dice Rolling System created for use with the "Role&Roll" TRPG system.
 
-This project is an unofficial, fan-made dice roller created for use with the
-"Role&Roll" TRPG system.
+"Role&Roll" and all related names, logos, rules, game mechanics, and settings are the intellectual property of BGN Squad (and/or the respective rights holders). This project is not affiliated with, endorsed by, or sponsored by BGN Squad.
 
-"Role&Roll" and all related names, logos, rules, game mechanics, and setting
-are the intellectual property of BGN Squad (and/or the respective rights
-holders). This project is not affiliated with, endorsed by, or sponsored by
-BGN Squad.
+Terms of Use:
 
-Permission is granted to download, use, and modify this code for personal,
-non-commercial purposes only.
+    Permission is granted to download, use, and modify this software for personal, non-commercial purposes only.
+
+    This software is designed to facilitate character management and dice mechanics within the "Role&Roll" system.
+
+    Users are responsible for ensuring their use of this tool complies with the official "Role&Roll" community guidelines or terms of service provided by BGN Squad.
 
 All rights reserved by BGN Squad and Panisara Thepthong.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE OR THE ROLE&ROLL TRPG SYSTEM.
+Disclaimer:
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE, THE USE OF CHARACTER DATA, OR OTHER DEALINGS IN THE SOFTWARE OR THE ROLE&ROLL TRPG SYSTEM.
