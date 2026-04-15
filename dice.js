@@ -12,6 +12,10 @@ let equipmentDependencySelection = [];
 let extraSkillDependencySelection = [];
 let extraSkillPointsSelection = 0;
 let deleteCharacterModal;
+let newCharacterModal;
+let specialDiceBuilderState = [];
+let specialDieDraftFaces = ["1", "", "", "", "", "R"];
+let specialDieEditIndex = -1;
 
 const LEGACY_STORAGE_KEY = "rolenroll_sheet_state_v1";
 const SHEET_STORAGE_PREFIX = "rolenroll_sheet_state_v2_";
@@ -36,6 +40,9 @@ const sheetState = {
 
 document.addEventListener("DOMContentLoaded", () => {
   initSheetManager();
+  setupV5Layout();
+  setupCharacterInfoTabs();
+  setupSpecialDiceBuilder();
 
   // 1) Load saved sheet state FIRST (so attrs/skills are ready)
   loadSheetStateFromStorage();
@@ -126,8 +133,272 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 14) Delete character controls
   setupDeleteCharacterControls();
+  setupNewCharacterControls();
   updateDeleteCharacterButton();
 });
+
+function setupV5Layout() {
+  const sheetPanel = document.querySelector(".sheet-panel.sheet-column");
+  const characterInfoCard = document.querySelector(".character-info-card");
+  const itemsPanel = document.querySelector(".items-panel");
+  const extraSkillPanel = document.querySelector(".extra-skill-panel");
+
+  if (sheetPanel && characterInfoCard && itemsPanel && extraSkillPanel) {
+    characterInfoCard.after(itemsPanel, extraSkillPanel);
+  }
+
+  const rollResultModal = document.getElementById("result-modal");
+  if (rollResultModal && rollResultModal.parentElement !== document.body) {
+    document.body.append(rollResultModal);
+  }
+
+  const toggleBtn = document.getElementById("manual-roll-toggle");
+  const closeBtn = document.getElementById("manual-roll-close");
+  const drawer = document.getElementById("dice-panel");
+  const backdrop = document.getElementById("dice-drawer-backdrop");
+
+  if (!toggleBtn || !drawer) return;
+
+  function setDiceDrawerOpen(isOpen) {
+    document.body.classList.toggle("dice-drawer-open", isOpen);
+    toggleBtn.setAttribute("aria-expanded", isOpen.toString());
+    drawer.setAttribute("aria-hidden", (!isOpen).toString());
+    if (backdrop) backdrop.classList.toggle("hidden", !isOpen);
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    setDiceDrawerOpen(!document.body.classList.contains("dice-drawer-open"));
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => setDiceDrawerOpen(false));
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => setDiceDrawerOpen(false));
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && document.body.classList.contains("dice-drawer-open")) {
+      setDiceDrawerOpen(false);
+    }
+  });
+}
+
+function setupCharacterInfoTabs() {
+  const tabs = document.querySelectorAll(".character-info-tab[data-character-tab]");
+  const panels = document.querySelectorAll(".character-info-panel[data-character-panel]");
+  if (!tabs.length || !panels.length) return;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.characterTab;
+
+      tabs.forEach((button) => {
+        const isActive = button === tab;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", isActive.toString());
+      });
+
+      panels.forEach((panel) => {
+        const isActive = panel.dataset.characterPanel === target;
+        panel.classList.toggle("is-active", isActive);
+        panel.classList.toggle("hidden", !isActive);
+      });
+    });
+  });
+}
+
+function setupSpecialDiceBuilder() {
+  const specialInput = document.getElementById("special");
+  const addBtn = document.getElementById("add-special-die-btn");
+  const list = document.getElementById("special-dice-list");
+  const preview = document.getElementById("special-preview");
+
+  if (!specialInput || !addBtn || !list) return;
+
+  const modal = ensureSpecialDieModal();
+
+  function syncSpecialDiceInput() {
+    const payload = specialDiceBuilderState.map((faces) => ({
+      kind: "custom",
+      faces
+    }));
+
+    specialInput.value = payload.length ? JSON.stringify(payload) : "";
+
+    if (preview) {
+      preview.textContent = payload.length
+        ? `${payload.length} custom ${payload.length === 1 ? "die" : "dice"}`
+        : "None";
+    }
+  }
+
+  function renderSpecialDiceList() {
+    if (!specialDiceBuilderState.length) {
+      list.innerHTML = '<p class="special-dice-empty">No special dice.</p>';
+      syncSpecialDiceInput();
+      return;
+    }
+
+    list.innerHTML = specialDiceBuilderState
+      .map((faces, index) => `
+        <div class="special-die-card">
+          <div class="special-die-card-faces" aria-label="Special die ${index + 1} faces">
+            ${faces.map((face, faceIndex) => `<span class="special-die-face ${getSpecialFaceClass(face)}">${getSpecialFaceDisplay(face, faceIndex)}</span>`).join("")}
+          </div>
+          <div class="special-die-card-actions">
+            <button type="button" class="icon-action-btn" data-special-die-action="edit" data-index="${index}" aria-label="Edit special die ${index + 1}">✎</button>
+            <button type="button" class="icon-action-btn equipment-remove-btn" data-special-die-action="remove" data-index="${index}" aria-label="Remove special die ${index + 1}">⌫</button>
+          </div>
+        </div>
+      `)
+      .join("");
+
+    syncSpecialDiceInput();
+  }
+
+  function openSpecialDieModal(index = -1) {
+    specialDieEditIndex = index;
+    specialDieDraftFaces = index >= 0
+      ? [...specialDiceBuilderState[index]]
+      : ["1", "", "", "", "", "R"];
+
+    renderSpecialDieDraft();
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeSpecialDieModal() {
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  function renderSpecialDieDraft() {
+    const title = document.getElementById("special-die-modal-title");
+    const saveBtn = document.getElementById("save-special-die-btn");
+    const faceButtons = modal.querySelectorAll(".special-die-editor-face");
+
+    if (title) title.textContent = specialDieEditIndex >= 0 ? "Edit Special Die" : "Add Special Die";
+    if (saveBtn) saveBtn.textContent = specialDieEditIndex >= 0 ? "Save" : "Add";
+
+    faceButtons.forEach((button) => {
+      const faceIndex = parseInt(button.dataset.faceIndex || "0", 10);
+      const face = specialDieDraftFaces[faceIndex] || "";
+      button.textContent = getSpecialFaceDisplay(face, faceIndex);
+      button.className = `special-die-editor-face ${getSpecialFaceClass(face)}`;
+    });
+  }
+
+  function cycleSpecialFace(faceIndex) {
+    const current = specialDieDraftFaces[faceIndex] || "";
+    const next = current === "" ? "+" : current === "+" ? "-" : "";
+    specialDieDraftFaces[faceIndex] = next;
+    renderSpecialDieDraft();
+  }
+
+  addBtn.addEventListener("click", () => openSpecialDieModal());
+
+  list.addEventListener("click", (event) => {
+    const actionBtn = event.target.closest("button[data-special-die-action]");
+    if (!actionBtn) return;
+
+    const index = parseInt(actionBtn.dataset.index || "-1", 10);
+    if (index < 0 || index >= specialDiceBuilderState.length) return;
+
+    if (actionBtn.dataset.specialDieAction === "edit") {
+      openSpecialDieModal(index);
+    } else if (actionBtn.dataset.specialDieAction === "remove") {
+      specialDiceBuilderState.splice(index, 1);
+      renderSpecialDiceList();
+    }
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (
+      event.target.id === "special-die-modal-backdrop" ||
+      event.target.id === "close-special-die-modal" ||
+      event.target.id === "cancel-special-die-btn"
+    ) {
+      closeSpecialDieModal();
+      return;
+    }
+
+    const faceBtn = event.target.closest(".special-die-editor-face");
+    if (faceBtn && !faceBtn.disabled) {
+      const faceIndex = parseInt(faceBtn.dataset.faceIndex || "0", 10);
+      if (faceIndex >= 1 && faceIndex <= 4) cycleSpecialFace(faceIndex);
+      return;
+    }
+
+    if (event.target.id === "save-special-die-btn") {
+      if (specialDieEditIndex >= 0) {
+        specialDiceBuilderState[specialDieEditIndex] = [...specialDieDraftFaces];
+      } else {
+        specialDiceBuilderState.push([...specialDieDraftFaces]);
+      }
+      renderSpecialDiceList();
+      closeSpecialDieModal();
+    }
+  });
+
+  renderSpecialDiceList();
+}
+
+function getSpecialFaceDisplay(face, index) {
+  if (index === 0 || face === "1") return ".";
+  if (face === "R") return "Ⓡ";
+  if (face === "+") return "+";
+  if (face === "-") return "-";
+  return "";
+}
+
+function getSpecialFaceClass(face) {
+  if (face === "1") return "is-point";
+  if (face === "R") return "is-reroll";
+  if (face === "+") return "is-plus";
+  if (face === "-") return "is-minus";
+  return "is-blank";
+}
+
+function ensureSpecialDieModal() {
+  let modal = document.getElementById("special-die-modal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "special-die-modal";
+  modal.className = "result-modal hidden";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "special-die-modal-title");
+  modal.innerHTML = `
+    <div class="result-modal-backdrop" id="special-die-modal-backdrop"></div>
+    <div class="result-modal-panel special-die-modal-panel">
+      <div class="result-modal-header">
+        <h2 id="special-die-modal-title">Add Special Die</h2>
+        <button type="button" id="close-special-die-modal" class="result-modal-close" aria-label="Close special die form">×</button>
+      </div>
+      <div class="result-modal-body">
+        <p class="special-die-editor-hint">Click to change dice face.</p>
+        <div class="special-die-editor" aria-label="Special die faces">
+          <button type="button" class="special-die-editor-face is-point" data-face-index="0" disabled>.</button>
+          <button type="button" class="special-die-editor-face is-blank" data-face-index="1"></button>
+          <button type="button" class="special-die-editor-face is-blank" data-face-index="2"></button>
+          <button type="button" class="special-die-editor-face is-blank" data-face-index="3"></button>
+          <button type="button" class="special-die-editor-face is-blank" data-face-index="4"></button>
+          <button type="button" class="special-die-editor-face is-reroll" data-face-index="5" disabled>R</button>
+        </div>
+        <div class="equipment-form-actions">
+          <button type="button" id="save-special-die-btn">Add</button>
+          <button type="button" id="cancel-special-die-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.append(modal);
+  return modal;
+}
 
 function createSheetId() {
   return `sheet-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -146,11 +417,19 @@ function createDefaultSheetPayload(name = "") {
     globals: {
       name,
       level: "0",
-      exp: "0/0",
-      health: "10",
-      healthMax: "10",
+      exp: "0",
+      expMax: "0",
+      health: "0",
+      healthMax: "0",
       defense: "0",
-      will: "0"
+      will: "0",
+      profile: "",
+      gender: "",
+      age: "",
+      race: "",
+      willSource: "",
+      background: "",
+      image: ""
     },
     equipment: [],
     statuses: [],
@@ -277,6 +556,53 @@ function setupDeleteCharacterControls() {
   if (backdrop) backdrop.addEventListener("click", closeDeleteCharacterModal);
 }
 
+function openNewCharacterModal() {
+  if (!newCharacterModal) return;
+  const nameInput = document.getElementById("new-character-name");
+  if (nameInput) nameInput.value = "";
+  newCharacterModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => nameInput?.focus(), 0);
+}
+
+function closeNewCharacterModal() {
+  if (!newCharacterModal) return;
+  newCharacterModal.classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+function createNewSheetFromModal(event) {
+  event.preventDefault();
+  const nameInput = document.getElementById("new-character-name");
+  const name = nameInput?.value.trim() || "";
+  if (!name) {
+    nameInput?.focus();
+    return;
+  }
+
+  const nextId = createNewSheet(name);
+  closeNewCharacterModal();
+  switchToSheet(nextId);
+}
+
+function setupNewCharacterControls() {
+  newCharacterModal = document.getElementById("new-character-modal");
+  const form = document.getElementById("new-character-form");
+  const closeBtn = document.getElementById("close-new-character-modal");
+  const cancelBtn = document.getElementById("cancel-new-character-btn");
+  const backdrop = document.getElementById("new-character-modal-backdrop");
+
+  if (form) form.addEventListener("submit", createNewSheetFromModal);
+  if (closeBtn) closeBtn.addEventListener("click", closeNewCharacterModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeNewCharacterModal);
+  if (backdrop) backdrop.addEventListener("click", closeNewCharacterModal);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && newCharacterModal && !newCharacterModal.classList.contains("hidden")) {
+      closeNewCharacterModal();
+    }
+  });
+}
+
 function createNewSheet(initialName = "") {
   const id = createSheetId();
   const fallbackName = `Character ${sheetDirectory.length + 1}`;
@@ -346,10 +672,7 @@ function initSheetManager() {
   }
 
   if (newSheetBtn) {
-    newSheetBtn.addEventListener("click", () => {
-      const nextId = createNewSheet("");
-      switchToSheet(nextId);
-    });
+    newSheetBtn.addEventListener("click", openNewCharacterModal);
   }
 
   renderSheetTabs();
@@ -372,11 +695,18 @@ function applySheetStateToUI() {
   const globalMap = [
     { id: "char-name", key: "name", fallback: "" },
     { id: "char-level", key: "level", fallback: "0" },
-    { id: "char-exp", key: "exp", fallback: "0/0" },
-    { id: "char-health", key: "health", fallback: "10" },
-    { id: "char-health-max", key: "healthMax", fallback: "10" },
+    { id: "char-exp", key: "exp", fallback: "0" },
+    { id: "char-exp-max", key: "expMax", fallback: "0" },
+    { id: "char-health", key: "health", fallback: "0" },
+    { id: "char-health-max", key: "healthMax", fallback: "0" },
     { id: "char-defense", key: "defense", fallback: "0" },
-    { id: "char-willpower", key: "will", fallback: "0" }
+    { id: "char-willpower", key: "will", fallback: "0" },
+    { id: "profile-char-name", key: "name", fallback: "" },
+    { id: "char-gender", key: "gender", fallback: "" },
+    { id: "char-age", key: "age", fallback: "" },
+    { id: "char-race", key: "race", fallback: "" },
+    { id: "char-will-source", key: "willSource", fallback: "" },
+    { id: "char-background", key: "background", fallback: "" }
   ];
 
   globalMap.forEach(({ id, key, fallback }) => {
@@ -384,6 +714,8 @@ function applySheetStateToUI() {
     if (!el) return;
     el.value = sheetState.globals?.[key] != null ? sheetState.globals[key] : fallback;
   });
+  clampExpFields();
+  clampHealthFields();
 
   const hearts = document.querySelectorAll(".mental-heart");
   const heartState = Array.isArray(sheetState.hearts) && sheetState.hearts.length
@@ -416,6 +748,7 @@ function applySheetStateToUI() {
   renderStatusList();
   renderItemList();
   renderExtraSkillList();
+  applyCharacterImageFromState();
   renderSheetTabs();
   updateDeleteCharacterButton();
 }
@@ -475,16 +808,18 @@ function setupEquipment() {
   const backdrop = document.getElementById("equipment-modal-backdrop");
   const form = document.getElementById("equipment-form");
   const list = document.getElementById("equipment-list");
+  const equipmentBlock = document.querySelector(".equipment-block");
   const openDependencyBtn = document.getElementById("open-equipment-dependency-modal");
   const closeDependencyBtn = document.getElementById("close-equipment-dependency-modal");
   const cancelDependencyBtn = document.getElementById("cancel-equipment-dependency-btn");
   const saveDependencyBtn = document.getElementById("save-equipment-dependency-btn");
   const dependencyBackdrop = document.getElementById("equipment-dependency-modal-backdrop");
+  const statToggles = document.querySelectorAll("[data-equipment-stat-toggle]");
 
   if (!list || !form) return;
 
   if (openBtn) {
-    openBtn.addEventListener("click", () => openEquipmentModal());
+    openBtn.addEventListener("click", () => openEquipmentModal(null, "wearing"));
   }
 
   if (closeBtn) {
@@ -519,53 +854,65 @@ function setupEquipment() {
     dependencyBackdrop.addEventListener("click", closeEquipmentDependencyModal);
   }
 
+  statToggles.forEach((toggle) => {
+    toggle.addEventListener("change", () => updateEquipmentStatOption(toggle.dataset.equipmentStatToggle));
+  });
+
   form.addEventListener("submit", onEquipmentSubmit);
 
-  list.addEventListener("click", (event) => {
-    const actionBtn = event.target.closest("button[data-action]");
-    if (!actionBtn) return;
+  if (equipmentBlock) {
+    equipmentBlock.addEventListener("click", (event) => {
+      const addSlotBtn = event.target.closest("button[data-equipment-add-slot]");
+      if (addSlotBtn) {
+        openEquipmentModal(null, addSlotBtn.dataset.equipmentAddSlot || "wearing");
+        return;
+      }
 
-    const id = actionBtn.dataset.id;
-    const action = actionBtn.dataset.action;
-    const item = sheetState.equipment.find((entry) => entry.id === id);
-    if (!item) return;
+      const actionBtn = event.target.closest("button[data-action]");
+      if (!actionBtn) return;
 
-    if (action === "edit") {
-      openEquipmentModal(item);
-      return;
-    }
+      const id = actionBtn.dataset.id;
+      const action = actionBtn.dataset.action;
+      const item = sheetState.equipment.find((entry) => entry.id === id);
+      if (!item) return;
 
-    if (action === "roll") {
-      rollEquipment(item);
-      return;
-    }
+      if (action === "edit") {
+        openEquipmentModal(item);
+        return;
+      }
 
-    if (action === "remove") {
-      removeEquipment(id);
-    }
-  });
+      if (action === "roll") {
+        rollEquipment(item);
+        return;
+      }
 
-  list.addEventListener("input", (event) => {
-    const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
-    if (!input) return;
+      if (action === "remove") {
+        removeEquipment(id);
+      }
+    });
 
-    updateEquipmentNumberField(
-      input.dataset.equipmentId,
-      input.dataset.equipmentField,
-      input.value
-    );
-  });
+    equipmentBlock.addEventListener("input", (event) => {
+      const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
+      if (!input) return;
 
-  list.addEventListener("change", (event) => {
-    const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
-    if (!input) return;
+      updateEquipmentNumberField(
+        input.dataset.equipmentId,
+        input.dataset.equipmentField,
+        input.value
+      );
+    });
 
-    updateEquipmentNumberField(
-      input.dataset.equipmentId,
-      input.dataset.equipmentField,
-      input.value
-    );
-  });
+    equipmentBlock.addEventListener("change", (event) => {
+      const input = event.target.closest("input[data-equipment-field][data-equipment-id]");
+      if (!input) return;
+
+      updateEquipmentNumberField(
+        input.dataset.equipmentId,
+        input.dataset.equipmentField,
+        input.value
+      );
+    });
+  }
 
   renderEquipmentList();
 
@@ -582,7 +929,7 @@ function setupEquipment() {
   });
 }
 
-function openEquipmentModal(item = null) {
+function openEquipmentModal(item = null, slot = "wearing") {
   const modal = document.getElementById("equipment-modal");
   const title = document.getElementById("equipment-modal-title");
   const saveBtn = document.getElementById("save-equipment-btn");
@@ -590,7 +937,7 @@ function openEquipmentModal(item = null) {
 
   if (!modal || !form) return;
 
-  populateEquipmentForm(item);
+  populateEquipmentForm(item, slot);
   equipmentDependencySelection = Array.isArray(item?.dependencies) ? [...item.dependencies] : [];
   renderEquipmentDependencyList();
 
@@ -644,7 +991,7 @@ function closeEquipmentModal() {
   document.body.style.overflow = "";
 }
 
-function populateEquipmentForm(item) {
+function populateEquipmentForm(item, slot = "wearing") {
   const idInput = document.getElementById("equipment-id");
   const nameInput = document.getElementById("equipment-name");
   const descriptionInput = document.getElementById("equipment-description");
@@ -652,6 +999,7 @@ function populateEquipmentForm(item) {
   const chargeInput = document.getElementById("equipment-charge");
   const defInput = document.getElementById("equipment-def");
   const toughnessInput = document.getElementById("equipment-toughness");
+  const slotInputs = document.querySelectorAll('input[name="equipment-slot"]');
 
   if (!nameInput) return;
 
@@ -663,16 +1011,27 @@ function populateEquipmentForm(item) {
     if (chargeInput) chargeInput.value = "0";
     if (defInput) defInput.value = "0";
     if (toughnessInput) toughnessInput.value = "0";
+    slotInputs.forEach((input) => {
+      input.checked = input.value === normalizeEquipmentSlot(slot);
+    });
+    ["dmg", "charge", "def", "toughness"].forEach((field) => setEquipmentStatChecked(field, false));
     return;
   }
 
+  const normalized = normalizeEquipmentItem(item);
   if (idInput) idInput.value = item.id;
-  nameInput.value = item.name || "";
-  if (descriptionInput) descriptionInput.value = item.description || "";
-  if (dmgInput) dmgInput.value = item.dmg || "";
-  if (chargeInput) chargeInput.value = item.charge ?? 0;
-  if (defInput) defInput.value = item.def ?? 0;
-  if (toughnessInput) toughnessInput.value = item.toughness ?? 0;
+  nameInput.value = normalized.name || "";
+  if (descriptionInput) descriptionInput.value = normalized.description || "";
+  if (dmgInput) dmgInput.value = normalized.dmg || "";
+  if (chargeInput) chargeInput.value = normalized.charge ?? 0;
+  if (defInput) defInput.value = normalized.def ?? 0;
+  if (toughnessInput) toughnessInput.value = normalized.toughness ?? 0;
+  slotInputs.forEach((input) => {
+    input.checked = input.value === normalized.slot;
+  });
+  ["dmg", "charge", "def", "toughness"].forEach((field) => {
+    setEquipmentStatChecked(field, !!normalized.stats?.[field]);
+  });
 }
 
 function onEquipmentSubmit(event) {
@@ -685,6 +1044,7 @@ function onEquipmentSubmit(event) {
   const chargeInput = document.getElementById("equipment-charge");
   const defInput = document.getElementById("equipment-def");
   const toughnessInput = document.getElementById("equipment-toughness");
+  const selectedSlot = document.querySelector('input[name="equipment-slot"]:checked');
 
   if (!nameInput) return;
 
@@ -693,6 +1053,13 @@ function onEquipmentSubmit(event) {
     alert("Please enter an equipment name.");
     return;
   }
+
+  const stats = {
+    dmg: isEquipmentStatChecked("dmg"),
+    charge: isEquipmentStatChecked("charge"),
+    def: isEquipmentStatChecked("def"),
+    toughness: isEquipmentStatChecked("toughness")
+  };
 
   let charge = parseInt(chargeInput?.value || "0", 10);
   if (Number.isNaN(charge) || charge < 0) charge = 0;
@@ -706,10 +1073,12 @@ function onEquipmentSubmit(event) {
     id: existingId || `equip-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     name,
     description: descriptionInput?.value.trim() || "",
-    dmg: dmgInput?.value.trim() || "",
-    charge,
-    def,
-    toughness,
+    slot: normalizeEquipmentSlot(selectedSlot?.value || "wearing"),
+    dmg: stats.dmg ? dmgInput?.value.trim() || "" : "",
+    charge: stats.charge ? charge : 0,
+    def: stats.def ? def : 0,
+    toughness: stats.toughness ? toughness : 0,
+    stats,
     dependencies: [...equipmentDependencySelection]
   };
 
@@ -720,15 +1089,15 @@ function onEquipmentSubmit(event) {
     sheetState.equipment.unshift(payload);
   }
 
-  saveSheetStateToStorage();
   renderEquipmentList();
+  saveSheetStateToStorage();
   closeEquipmentModal();
 }
 
 function removeEquipment(id) {
   sheetState.equipment = sheetState.equipment.filter((item) => item.id !== id);
-  saveSheetStateToStorage();
   renderEquipmentList();
+  saveSheetStateToStorage();
 }
 
 function collectStatOptions() {
@@ -945,40 +1314,56 @@ function updateEquipmentNumberField(id, field, value) {
   if (Number.isNaN(nextValue) || nextValue < 0) nextValue = 0;
 
   item[field] = nextValue;
+  item.stats = {
+    ...(item.stats || {}),
+    [field]: true
+  };
+  updateDerivedDefenseFromGear();
+  renderBasicGearTags();
   saveSheetStateToStorage();
 }
 
 function renderEquipmentList() {
-  const list = document.getElementById("equipment-list");
-  if (!list) return;
+  const wearingList = document.getElementById("equipment-list");
+  const leftHandList = document.getElementById("left-hand-equipment-list");
+  const rightHandList = document.getElementById("right-hand-equipment-list");
+  if (!wearingList) return;
 
-  if (!Array.isArray(sheetState.equipment) || sheetState.equipment.length === 0) {
-    list.innerHTML = '<p class="equipment-empty">No equipment yet.</p>';
-    return;
+  const normalizedEquipment = Array.isArray(sheetState.equipment)
+    ? sheetState.equipment.map(normalizeEquipmentItem)
+    : [];
+
+  const leftHand = normalizedEquipment.filter((item) => item.slot === "left-hand");
+  const rightHand = normalizedEquipment.filter((item) => item.slot === "right-hand");
+  const wearing = normalizedEquipment.filter((item) => item.slot === "wearing");
+
+  if (leftHandList) {
+    leftHandList.innerHTML = leftHand.length
+      ? leftHand.map(renderEquipmentCard).join("")
+      : '<p class="equipment-empty">Empty hand.</p>';
   }
 
-  list.innerHTML = sheetState.equipment
-    .map((item) => `
+  if (rightHandList) {
+    rightHandList.innerHTML = rightHand.length
+      ? rightHand.map(renderEquipmentCard).join("")
+      : '<p class="equipment-empty">Empty hand.</p>';
+  }
+
+  wearingList.innerHTML = wearing.length
+    ? wearing.map(renderEquipmentCard).join("")
+    : '<p class="equipment-empty">No worn equipment yet.</p>';
+
+  updateDerivedDefenseFromGear();
+  renderBasicGearTags();
+}
+
+function renderEquipmentCard(item) {
+  return `
       <div class="equipment-item">
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="equipment-preview">
-            <span class="equipment-number-inline equipment-dmg-inline">
-              <span>DMG</span>
-              <span class="equipment-dmg-value">${escapeHtml(item.dmg || "-")}</span>
-            </span>
-            <label class="equipment-number-inline">
-              <span>Charge</span>
-              <input type="number" min="0" value="${escapeHtml(item.charge ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="charge" aria-label="Charge for ${escapeHtml(item.name || "equipment")}">
-            </label>
-            <label class="equipment-number-inline">
-              <span>DEF</span>
-              <input type="number" min="0" value="${escapeHtml(item.def ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="def" aria-label="DEF for ${escapeHtml(item.name || "equipment")}">
-            </label>
-            <label class="equipment-number-inline">
-              <span>TOUGH</span>
-              <input type="number" min="0" value="${escapeHtml(item.toughness ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="toughness" aria-label="Toughness for ${escapeHtml(item.name || "equipment")}">
-            </label>
+            ${renderEquipmentStatPreview(item)}
           </div>
           <div class="equipment-preview equipment-dependency-preview">
             ${Array.isArray(item.dependencies) && item.dependencies.length
@@ -996,8 +1381,143 @@ function renderEquipmentList() {
           <button type="button" class="icon-action-btn equipment-remove-btn" data-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "equipment")}">⌫</button>
         </div>
       </div>
-    `)
-    .join("");
+    `;
+}
+
+function renderEquipmentStatPreview(item) {
+  const parts = [];
+  if (item.stats?.dmg) {
+    parts.push(`
+      <span class="equipment-number-inline equipment-dmg-inline">
+        <span>DMG</span>
+        <span class="equipment-dmg-value">${escapeHtml(item.dmg || "-")}</span>
+      </span>
+    `);
+  }
+  if (item.stats?.charge) {
+    parts.push(`
+      <label class="equipment-number-inline">
+        <span>Charge</span>
+        <input type="number" min="0" value="${escapeHtml(item.charge ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="charge" aria-label="Charge for ${escapeHtml(item.name || "equipment")}">
+      </label>
+    `);
+  }
+  if (item.stats?.def) {
+    parts.push(`
+      <label class="equipment-number-inline">
+        <span>DEF</span>
+        <input type="number" min="0" value="${escapeHtml(item.def ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="def" aria-label="DEF for ${escapeHtml(item.name || "equipment")}">
+      </label>
+    `);
+  }
+  if (item.stats?.toughness) {
+    parts.push(`
+      <label class="equipment-number-inline">
+        <span>TOUGH</span>
+        <input type="number" min="0" value="${escapeHtml(item.toughness ?? 0)}" data-equipment-id="${item.id}" data-equipment-field="toughness" aria-label="Toughness for ${escapeHtml(item.name || "equipment")}">
+      </label>
+    `);
+  }
+
+  return parts.length ? parts.join("") : '<span class="equipment-dependency-empty">No visible stats</span>';
+}
+
+function normalizeEquipmentSlot(slot) {
+  if (slot === "left-hand" || slot === "right-hand" || slot === "wearing") return slot;
+  return "wearing";
+}
+
+function normalizeEquipmentItem(item) {
+  const charge = parseInt(item?.charge ?? "0", 10);
+  const def = parseInt(item?.def ?? "0", 10);
+  const toughness = parseInt(item?.toughness ?? "0", 10);
+  const stats = {
+    dmg: item?.stats?.dmg ?? !!item?.dmg,
+    charge: item?.stats?.charge ?? (!Number.isNaN(charge) && charge > 0),
+    def: item?.stats?.def ?? (!Number.isNaN(def) && def > 0),
+    toughness: item?.stats?.toughness ?? (!Number.isNaN(toughness) && toughness > 0)
+  };
+
+  return {
+    ...item,
+    slot: normalizeEquipmentSlot(item?.slot || "wearing"),
+    charge: Number.isNaN(charge) || charge < 0 ? 0 : charge,
+    def: Number.isNaN(def) || def < 0 ? 0 : def,
+    toughness: Number.isNaN(toughness) || toughness < 0 ? 0 : toughness,
+    stats
+  };
+}
+
+function isEquipmentStatChecked(field) {
+  const input = document.querySelector(`[data-equipment-stat-toggle="${field}"]`);
+  return !!input?.checked;
+}
+
+function setEquipmentStatChecked(field, checked) {
+  const input = document.querySelector(`[data-equipment-stat-toggle="${field}"]`);
+  if (input) input.checked = checked;
+  updateEquipmentStatOption(field);
+}
+
+function updateEquipmentStatOption(field) {
+  const toggle = document.querySelector(`[data-equipment-stat-toggle="${field}"]`);
+  const valueInput = document.getElementById(`equipment-${field}`);
+  if (!toggle || !valueInput) return;
+
+  valueInput.disabled = !toggle.checked;
+  if (!toggle.checked) {
+    valueInput.value = field === "dmg" ? "" : "0";
+  }
+}
+
+function updateDerivedDefenseFromGear() {
+  const defenseInput = document.getElementById("char-defense");
+  if (!defenseInput) return;
+
+  const totalDef = Array.isArray(sheetState.equipment)
+    ? sheetState.equipment
+        .map(normalizeEquipmentItem)
+        .filter((item) => item.slot === "wearing" && item.stats?.def)
+        .reduce((total, item) => total + (item.def || 0), 0)
+    : 0;
+
+  defenseInput.value = String(totalDef);
+  if (sheetState.globals) sheetState.globals.defense = String(totalDef);
+}
+
+function renderBasicGearTags() {
+  const container = document.getElementById("basic-gear-tags");
+  if (!container) return;
+
+  const wornGear = Array.isArray(sheetState.equipment)
+    ? sheetState.equipment.map(normalizeEquipmentItem).filter((item) => item.slot === "wearing")
+    : [];
+
+  if (!wornGear.length) {
+    container.innerHTML = '<span class="basic-status-empty">No worn gear.</span>';
+    return;
+  }
+
+  container.innerHTML = wornGear.map((item) => {
+    const stats = [
+      item.stats?.dmg ? `DMG ${item.dmg || "-"}` : "",
+      item.stats?.charge ? `Charge ${item.charge || 0}` : "",
+      item.stats?.def ? `DEF ${item.def || 0}` : "",
+      item.stats?.toughness ? `Tough ${item.toughness || 0}` : ""
+    ].filter(Boolean).join(" | ");
+    const tooltip = [item.name || "Equipment", stats, item.description || ""].filter(Boolean).join("\n");
+    return `
+      <button
+        type="button"
+        class="basic-gear-tag"
+        data-tooltip="${escapeHtml(tooltip)}"
+        aria-label="${escapeHtml(item.name || "equipment")}"
+      >
+        <span>${escapeHtml(item.name || "Equipment")}</span>
+        ${item.stats?.def ? `<span class="basic-status-turns">DEF ${escapeHtml(item.def || 0)}</span>` : ""}
+      </button>
+    `;
+  }).join("");
 }
 
 function escapeHtml(value) {
@@ -1016,6 +1536,10 @@ function setupStatuses() {
   const backdrop = document.getElementById("status-modal-backdrop");
   const form = document.getElementById("status-form");
   const list = document.getElementById("status-list");
+  const basicTags = document.getElementById("basic-status-tags");
+  const deleteBtn = document.getElementById("delete-status-btn");
+  const durationKindInputs = document.querySelectorAll('input[name="status-duration-kind"]');
+  const durationModeInputs = document.querySelectorAll('input[name="status-duration-mode"]');
 
   if (!list || !form) return;
 
@@ -1035,7 +1559,17 @@ function setupStatuses() {
     backdrop.addEventListener("click", closeStatusModal);
   }
 
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", onStatusModalDelete);
+  }
+
   form.addEventListener("submit", onStatusSubmit);
+  durationKindInputs.forEach((input) => {
+    input.addEventListener("change", updateStatusDurationFormVisibility);
+  });
+  durationModeInputs.forEach((input) => {
+    input.addEventListener("change", updateStatusDurationFormVisibility);
+  });
 
   list.addEventListener("click", (event) => {
     const actionBtn = event.target.closest("button[data-status-action]");
@@ -1070,6 +1604,16 @@ function setupStatuses() {
     updateStatusDuration(input.dataset.statusDurationId, input.value);
   });
 
+  if (basicTags) {
+    basicTags.addEventListener("dblclick", (event) => {
+      const tag = event.target.closest("[data-basic-status-id]");
+      if (!tag) return;
+
+      const item = sheetState.statuses.find((entry) => entry.id === tag.dataset.basicStatusId);
+      if (item) openStatusModal(item);
+    });
+  }
+
   renderStatusList();
 
   document.addEventListener("keydown", (event) => {
@@ -1084,6 +1628,7 @@ function openStatusModal(item = null) {
   const modal = document.getElementById("status-modal");
   const title = document.getElementById("status-modal-title");
   const saveBtn = document.getElementById("save-status-btn");
+  const deleteBtn = document.getElementById("delete-status-btn");
   const form = document.getElementById("status-form");
 
   if (!modal || !form) return;
@@ -1091,11 +1636,15 @@ function openStatusModal(item = null) {
   populateStatusForm(item);
 
   if (title) {
-    title.textContent = item ? "Edit Buff / Debuff" : "Add Buff / Debuff";
+    title.textContent = item ? "Edit Status" : "Add Status";
   }
 
   if (saveBtn) {
     saveBtn.textContent = item ? "Save" : "Save";
+  }
+
+  if (deleteBtn) {
+    deleteBtn.classList.toggle("hidden", !item);
   }
 
   modal.classList.remove("hidden");
@@ -1107,6 +1656,7 @@ function closeStatusModal() {
   const form = document.getElementById("status-form");
   const title = document.getElementById("status-modal-title");
   const saveBtn = document.getElementById("save-status-btn");
+  const deleteBtn = document.getElementById("delete-status-btn");
   const idInput = document.getElementById("status-id");
 
   if (modal) {
@@ -1122,11 +1672,15 @@ function closeStatusModal() {
   }
 
   if (title) {
-    title.textContent = "Add Buff / Debuff";
+    title.textContent = "Add Status";
   }
 
   if (saveBtn) {
     saveBtn.textContent = "Save";
+  }
+
+  if (deleteBtn) {
+    deleteBtn.classList.add("hidden");
   }
 
   document.body.style.overflow = "";
@@ -1136,8 +1690,11 @@ function populateStatusForm(item) {
   const idInput = document.getElementById("status-id");
   const nameInput = document.getElementById("status-name");
   const detailsInput = document.getElementById("status-details");
-  const durationInput = document.getElementById("status-duration");
+  const showBasicInput = document.getElementById("status-show-basic");
+  const durationTurnsInput = document.getElementById("status-duration-turns");
   const typeInputs = document.querySelectorAll('input[name="status-type"]');
+  const durationKindInputs = document.querySelectorAll('input[name="status-duration-kind"]');
+  const durationModeInputs = document.querySelectorAll('input[name="status-duration-mode"]');
 
   if (!nameInput) return;
 
@@ -1145,20 +1702,37 @@ function populateStatusForm(item) {
     if (idInput) idInput.value = "";
     nameInput.value = "";
     if (detailsInput) detailsInput.value = "";
-    if (durationInput) durationInput.value = "1";
+    if (showBasicInput) showBasicInput.checked = false;
+    if (durationTurnsInput) durationTurnsInput.value = "1";
     typeInputs.forEach((input) => {
       input.checked = input.value === "buff";
     });
+    durationKindInputs.forEach((input) => {
+      input.checked = input.value === "permanent";
+    });
+    durationModeInputs.forEach((input) => {
+      input.checked = input.value === "turns";
+    });
+    updateStatusDurationFormVisibility();
     return;
   }
 
   if (idInput) idInput.value = item.id;
   nameInput.value = item.name || "";
   if (detailsInput) detailsInput.value = item.details || "";
-  if (durationInput) durationInput.value = item.duration ?? 1;
+  const normalized = normalizeStatusItem(item);
+  if (showBasicInput) showBasicInput.checked = !!normalized.showOnBasic;
+  if (durationTurnsInput) durationTurnsInput.value = normalized.durationTurns ?? 1;
   typeInputs.forEach((input) => {
-    input.checked = input.value === (item.type || "buff");
+    input.checked = input.value === normalized.type;
   });
+  durationKindInputs.forEach((input) => {
+    input.checked = input.value === normalized.durationKind;
+  });
+  durationModeInputs.forEach((input) => {
+    input.checked = input.value === normalized.durationMode;
+  });
+  updateStatusDurationFormVisibility();
 }
 
 function onStatusSubmit(event) {
@@ -1167,8 +1741,11 @@ function onStatusSubmit(event) {
   const idInput = document.getElementById("status-id");
   const nameInput = document.getElementById("status-name");
   const detailsInput = document.getElementById("status-details");
-  const durationInput = document.getElementById("status-duration");
   const selectedType = document.querySelector('input[name="status-type"]:checked');
+  const selectedDurationKind = document.querySelector('input[name="status-duration-kind"]:checked');
+  const selectedDurationMode = document.querySelector('input[name="status-duration-mode"]:checked');
+  const showBasicInput = document.getElementById("status-show-basic");
+  const durationTurnsInput = document.getElementById("status-duration-turns");
 
   if (!nameInput) return;
 
@@ -1178,16 +1755,22 @@ function onStatusSubmit(event) {
     return;
   }
 
-  let duration = parseInt(durationInput?.value || "0", 10);
-  if (Number.isNaN(duration) || duration < 0) duration = 0;
+  let durationTurns = parseInt(durationTurnsInput?.value || "0", 10);
+  if (Number.isNaN(durationTurns) || durationTurns < 0) durationTurns = 0;
+  const durationKind = selectedDurationKind?.value === "temporary" ? "temporary" : "permanent";
+  const durationMode = selectedDurationMode?.value === "skill-check" ? "skill-check" : "turns";
 
   const existingId = idInput?.value || "";
   const payload = {
     id: existingId || `status-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     name,
     details: detailsInput?.value.trim() || "",
-    duration,
-    type: selectedType?.value === "debuff" ? "debuff" : "buff"
+    duration: durationTurns,
+    durationKind,
+    durationMode,
+    durationTurns,
+    showOnBasic: !!showBasicInput?.checked,
+    type: normalizeStatusType(selectedType?.value || "buff")
   };
 
   const existingIndex = sheetState.statuses.findIndex((item) => item.id === payload.id);
@@ -1208,6 +1791,15 @@ function removeStatus(id) {
   renderStatusList();
 }
 
+function onStatusModalDelete() {
+  const idInput = document.getElementById("status-id");
+  const id = idInput?.value || "";
+  if (!id) return;
+
+  removeStatus(id);
+  closeStatusModal();
+}
+
 function updateStatusDuration(id, value) {
   const item = sheetState.statuses.find((entry) => entry.id === id);
   if (!item) return;
@@ -1216,35 +1808,91 @@ function updateStatusDuration(id, value) {
   if (Number.isNaN(duration) || duration < 0) duration = 0;
 
   item.duration = duration;
+  item.durationTurns = duration;
   saveSheetStateToStorage();
 }
 
 function renderStatusList() {
   const list = document.getElementById("status-list");
+  renderBasicStatusTags();
   if (!list) return;
 
   if (!Array.isArray(sheetState.statuses) || sheetState.statuses.length === 0) {
-    list.innerHTML = '<p class="equipment-empty">No buffs or debuffs yet.</p>';
+    list.innerHTML = `
+      <div class="status-column status-column-buff">
+        <p class="equipment-empty">No buffs yet.</p>
+      </div>
+      <div class="status-column status-column-debuff">
+        <p class="equipment-empty">No debuffs yet.</p>
+      </div>
+    `;
     return;
   }
 
-  list.innerHTML = sheetState.statuses
-    .map((item) => `
-      <div class="status-item status-item-${item.type === "debuff" ? "debuff" : "buff"}">
+  const normalizedStatuses = sheetState.statuses.map(normalizeStatusItem);
+  const buffs = normalizedStatuses.filter((item) => item.type === "buff");
+  const debuffs = normalizedStatuses.filter((item) => item.type !== "buff");
+
+  function renderStatusColumn(kind, items, emptyText) {
+    return `
+      <div class="status-column status-column-${kind}">
+        ${items.length
+          ? items.map(renderStatusCard).join("")
+          : `<p class="equipment-empty">${emptyText}</p>`}
+      </div>
+    `;
+  }
+
+  list.innerHTML = [
+    renderStatusColumn("buff", buffs, "No buffs yet."),
+    renderStatusColumn("debuff", debuffs, "No debuffs yet.")
+  ].join("");
+}
+
+function renderBasicStatusTags() {
+  const container = document.getElementById("basic-status-tags");
+  if (!container) return;
+
+  const visibleStatuses = Array.isArray(sheetState.statuses)
+    ? sheetState.statuses.map(normalizeStatusItem).filter((item) => item.showOnBasic)
+    : [];
+
+  if (visibleStatuses.length === 0) {
+    container.innerHTML = `<span class="basic-status-empty">No status tags.</span>`;
+    return;
+  }
+
+  container.innerHTML = visibleStatuses.map(renderBasicStatusTag).join("");
+}
+
+function renderBasicStatusTag(item) {
+  const tooltip = getStatusTooltipText(item);
+  const kind = item.type === "buff" ? "buff" : "debuff";
+  const turnBadge = item.durationKind === "temporary" && item.durationMode !== "skill-check"
+    ? `<span class="basic-status-turns">${escapeHtml(item.durationTurns || 0)} turn(s)</span>`
+    : "";
+  return `
+    <button
+      type="button"
+      class="basic-status-tag basic-status-tag-${kind}"
+      data-basic-status-id="${escapeHtml(item.id || "")}"
+      data-tooltip="${escapeHtml(tooltip)}"
+      aria-label="${escapeHtml(`Edit ${item.name || "status"}`)}"
+    >
+      <span>${escapeHtml(item.name || "Status")}</span>
+      ${turnBadge}
+    </button>
+  `;
+}
+
+function renderStatusCard(item) {
+  return `
+      <div class="status-item status-item-${item.type === "buff" ? "buff" : "debuff"}">
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="status-preview">
-            <label class="status-duration-inline">
-              <span>Duration</span>
-              <input
-                type="number"
-                min="0"
-                value="${escapeHtml(item.duration ?? 0)}"
-                data-status-duration-id="${item.id}"
-                aria-label="Duration for ${escapeHtml(item.name || "status")}"
-              >
-              <span>turn(s)</span>
-            </label>
+            <span class="dependency-chip">${escapeHtml(getStatusTypeLabel(item.type))}</span>
+            <span>${escapeHtml(getStatusDurationText(item))}</span>
           </div>
         </div>
         <div class="status-item-actions">
@@ -1252,8 +1900,64 @@ function renderStatusList() {
           <button type="button" class="icon-action-btn equipment-remove-btn" data-status-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "status")}">⌫</button>
         </div>
       </div>
-    `)
-    .join("");
+    `;
+}
+
+function normalizeStatusType(type) {
+  if (type === "debuff") return "flaw";
+  if (["buff", "injuries", "flaw", "psychiatric"].includes(type)) return type;
+  return "buff";
+}
+
+function normalizeStatusItem(item) {
+  const type = normalizeStatusType(item?.type || "buff");
+  const duration = parseInt(item?.durationTurns ?? item?.duration ?? "0", 10);
+  const durationTurns = Number.isNaN(duration) || duration < 0 ? 0 : duration;
+  const hasLegacyTurns = item?.durationKind == null && durationTurns > 0;
+  const durationKind = item?.durationKind === "temporary" || hasLegacyTurns ? "temporary" : "permanent";
+  const durationMode = item?.durationMode === "skill-check" ? "skill-check" : "turns";
+  return {
+    ...item,
+    type,
+    durationKind,
+    durationMode,
+    durationTurns,
+    duration: durationTurns,
+    showOnBasic: !!item?.showOnBasic
+  };
+}
+
+function getStatusTypeLabel(type) {
+  const labels = {
+    buff: "Buff",
+    injuries: "Injuries & Disorders",
+    flaw: "Flaw",
+    psychiatric: "Psychiatric Disorder"
+  };
+  return labels[normalizeStatusType(type)] || "Buff";
+}
+
+function getStatusDurationText(item) {
+  if (item.durationKind !== "temporary") return "Permanent";
+  if (item.durationMode === "skill-check") return "Until skill check passes";
+  return `${item.durationTurns || 0} turn(s)`;
+}
+
+function getStatusTooltipText(item) {
+  const details = item.details ? `\n${item.details}` : "";
+  return `${getStatusTypeLabel(item.type)}\n${getStatusDurationText(item)}${details}`;
+}
+
+function updateStatusDurationFormVisibility() {
+  const selectedDurationKind = document.querySelector('input[name="status-duration-kind"]:checked');
+  const selectedDurationMode = document.querySelector('input[name="status-duration-mode"]:checked');
+  const temporaryOptions = document.getElementById("status-temporary-options");
+  const turnsField = document.querySelector(".status-turns-field");
+  const isTemporary = selectedDurationKind?.value === "temporary";
+  const usesTurns = selectedDurationMode?.value !== "skill-check";
+
+  if (temporaryOptions) temporaryOptions.classList.toggle("hidden", !isTemporary);
+  if (turnsField) turnsField.classList.toggle("hidden", !isTemporary || !usesTurns);
 }
 
 function setupItems() {
@@ -1911,6 +2615,17 @@ function buildDieFaces(config = {}) {
   const kind = config.kind ?? "normal";
   const faces = ["1", "", "", "", "", "R"]; // sides 1..6
 
+  if (kind === "custom" && Array.isArray(config.faces)) {
+    const customFaces = config.faces.slice(0, 6).map((face) => {
+      if (face === "1" || face === "R" || face === "+" || face === "-") return face;
+      return "";
+    });
+    while (customFaces.length < 6) customFaces.push("");
+    customFaces[0] = "1";
+    customFaces[5] = "R";
+    return customFaces;
+  }
+
   if (kind === "adv") {
     let plusCount = config.plusCount ?? 1;
     if (plusCount > 4) {
@@ -2097,6 +2812,29 @@ function parseSpecialDice(str) {
   const trimmed = str.trim();
   if (!trimmed) return configs;
 
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!Array.isArray(parsed)) throw new Error("Expected an array");
+
+      return parsed.map((entry) => {
+        if (entry?.kind === "custom" && Array.isArray(entry.faces)) {
+          return { kind: "custom", faces: buildDieFaces(entry) };
+        }
+        if (entry?.kind === "adv") {
+          return { kind: "adv", plusCount: entry.plusCount };
+        }
+        if (entry?.kind === "neg") {
+          return { kind: "neg", minusCount: entry.minusCount };
+        }
+        return { kind: "normal" };
+      });
+    } catch (error) {
+      alert("Invalid special dice data. Please remove and add the special dice again.");
+      throw new Error("Invalid special dice JSON");
+    }
+  }
+
   const tokens = trimmed
     .split(/[, ]+/)
     .map((t) => t.trim())
@@ -2123,6 +2861,27 @@ function parseSpecialDice(str) {
   }
 
   return configs;
+}
+
+function formatSpecialDiceText(str) {
+  const trimmed = (str || "").trim();
+  if (!trimmed) return "";
+
+  if (!trimmed.startsWith("[")) return trimmed;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!Array.isArray(parsed) || parsed.length === 0) return "";
+    return parsed
+      .map((entry, index) => {
+        const faces = buildDieFaces(entry);
+        const faceText = faces.map((face, faceIndex) => getSpecialFaceDisplay(face, faceIndex) || "_").join("");
+        return `Die ${index + 1}: ${faceText}`;
+      })
+      .join(" / ");
+  } catch (error) {
+    return "Custom dice";
+  }
 }
 
 // ---------- history rendering ----------
@@ -2290,7 +3049,7 @@ function performRoll({ total, specialStr, success = 0, penalty = 0, equipmentDmg
   const entry = {
     time: Date.now(),
     totalDice: totalNum,
-    special: (specialStr || "").trim(),
+    special: formatSpecialDiceText(specialStr),
     success: succ,
     penalty: pen,
     diceTotal,
@@ -2567,6 +3326,9 @@ function updateStatDots(row, value) {
 function saveSheetStateToStorage() {
   try {
     if (!currentSheetId) return;
+    clampExpFields();
+    clampHealthFields();
+    updateDerivedDefenseFromGear();
 
     const hearts = Array.from(document.querySelectorAll(".mental-heart")).map(
       (btn) => !btn.classList.contains("off") // true if ON, false if OFF
@@ -2579,10 +3341,16 @@ function saveSheetStateToStorage() {
       { id: "char-name",       key: "name" },
       { id: "char-level",      key: "level" },
       { id: "char-exp",        key: "exp" },
+      { id: "char-exp-max",    key: "expMax" },
       { id: "char-health",     key: "health" },
       { id: "char-health-max", key: "healthMax" },
       { id: "char-defense",    key: "defense" },
-      { id: "char-willpower",  key: "will" }
+      { id: "char-willpower",  key: "will" },
+      { id: "char-gender",     key: "gender" },
+      { id: "char-age",        key: "age" },
+      { id: "char-race",       key: "race" },
+      { id: "char-will-source", key: "willSource" },
+      { id: "char-background", key: "background" }
     ];
 
     globalMap.forEach(({ id, key }) => {
@@ -2591,6 +3359,7 @@ function saveSheetStateToStorage() {
         globals[key] = el.value ?? "";
       }
     });
+    globals.image = sheetState.globals?.image || "";
 
     sheetState.globals = globals;
     updateCurrentSheetName(globals.name || "");
@@ -2647,6 +3416,8 @@ function loadSheetStateFromStorage() {
       ...createDefaultSheetPayload("").globals,
       ...(data.globals || {})
     };
+    migrateLegacyExpGlobals(sheetState.globals);
+    migrateLegacyProfileGlobals(sheetState.globals);
     sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
     sheetState.statuses = Array.isArray(data.statuses) ? data.statuses : [];
     sheetState.items = Array.isArray(data.items) ? data.items : [];
@@ -2656,10 +3427,17 @@ function loadSheetStateFromStorage() {
       { id: "char-name",       key: "name" },
       { id: "char-level",      key: "level" },
       { id: "char-exp",        key: "exp" },
+      { id: "char-exp-max",    key: "expMax" },
       { id: "char-health",     key: "health" },
       { id: "char-health-max", key: "healthMax" },
       { id: "char-defense",    key: "defense" },
-      { id: "char-willpower",  key: "will" }
+      { id: "char-willpower",  key: "will" },
+      { id: "profile-char-name", key: "name" },
+      { id: "char-gender",     key: "gender" },
+      { id: "char-age",        key: "age" },
+      { id: "char-race",       key: "race" },
+      { id: "char-will-source", key: "willSource" },
+      { id: "char-background", key: "background" }
     ];
 
     globalMap.forEach(({ id, key }) => {
@@ -2683,22 +3461,185 @@ function loadSheetStateFromStorage() {
 // watch header fields and save when user edits them
 function setupGlobalFieldPersistence() {
   const globalMap = [
-    { id: "char-name",       key: "name" },
-    { id: "char-level",      key: "level" },
-    { id: "char-exp",        key: "exp" },
-    { id: "char-health",     key: "health" },
-    { id: "char-health-max", key: "healthMax" },
-    { id: "char-defense",    key: "defense" },
-    { id: "char-willpower",  key: "will" }
+      { id: "char-name",       key: "name" },
+      { id: "char-level",      key: "level" },
+      { id: "char-exp",        key: "exp" },
+      { id: "char-exp-max",    key: "expMax" },
+      { id: "char-health",     key: "health" },
+	      { id: "char-health-max", key: "healthMax" },
+	      { id: "char-defense",    key: "defense" },
+	      { id: "char-willpower",  key: "will" },
+	      { id: "profile-char-name", key: "name" },
+	      { id: "char-gender",     key: "gender" },
+	      { id: "char-age",        key: "age" },
+	      { id: "char-race",       key: "race" },
+	      { id: "char-will-source", key: "willSource" },
+	      { id: "char-background", key: "background" }
   ];
 
   globalMap.forEach(({ id, key }) => {
     const el = document.getElementById(id);
     if (!el) return;
 
-    el.addEventListener("input", () => {
-      sheetState.globals[key] = el.value ?? "";
+	    el.addEventListener("input", () => {
+	      sheetState.globals[key] = el.value ?? "";
+	      if (key === "name") {
+	        syncCharacterNameFields(id, el.value ?? "");
+	      }
+      if (key === "exp" || key === "expMax") {
+        clampExpFields();
+        sheetState.globals.exp = document.getElementById("char-exp")?.value ?? "0";
+        sheetState.globals.expMax = document.getElementById("char-exp-max")?.value ?? "0";
+      }
+      if (key === "health" || key === "healthMax") {
+        clampHealthFields();
+        sheetState.globals.health = document.getElementById("char-health")?.value ?? "0";
+        sheetState.globals.healthMax = document.getElementById("char-health-max")?.value ?? "0";
+      }
       saveSheetStateToStorage();
     });
   });
+
+  setupBoundedPairFields();
+  setupCharacterImagePersistence();
+  applyCharacterImageFromState();
+}
+
+function migrateLegacyExpGlobals(globals) {
+  if (!globals || typeof globals !== "object") return;
+
+  const rawExp = String(globals.exp ?? "");
+  if (!rawExp.includes("/")) {
+    if (globals.expMax != null) return;
+    globals.expMax = "0";
+    return;
+  }
+
+  const [current, max] = rawExp.split("/");
+  globals.exp = normalizeNonNegativeNumber(current, 0);
+  globals.expMax = normalizeNonNegativeNumber(max, 0);
+}
+
+function migrateLegacyProfileGlobals(globals) {
+  if (!globals || typeof globals !== "object") return;
+  if (!globals.background && globals.profile) {
+    globals.background = globals.profile;
+  }
+}
+
+function normalizeNonNegativeNumber(value, fallback = 0) {
+  let number = parseInt(value ?? String(fallback), 10);
+  if (Number.isNaN(number) || number < 0) number = fallback;
+  return String(number);
+}
+
+function clampNumberPair(currentId, maxId) {
+  const currentInput = document.getElementById(currentId);
+  const maxInput = document.getElementById(maxId);
+  if (!currentInput || !maxInput) return;
+
+  let current = parseInt(currentInput.value || "0", 10);
+  let max = parseInt(maxInput.value || "0", 10);
+  if (Number.isNaN(current) || current < 0) current = 0;
+  if (Number.isNaN(max) || max < 0) max = 0;
+  if (current > max) current = max;
+
+  currentInput.value = String(current);
+  maxInput.value = String(max);
+}
+
+function clampExpFields() {
+  clampNumberPair("char-exp", "char-exp-max");
+}
+
+function clampHealthFields() {
+  clampNumberPair("char-health", "char-health-max");
+}
+
+function setupBoundedPairFields() {
+  [
+    ["char-exp", "char-exp-max"],
+    ["char-health", "char-health-max"]
+  ].forEach(([currentId, maxId]) => {
+    const currentInput = document.getElementById(currentId);
+    const maxInput = document.getElementById(maxId);
+    if (!currentInput || !maxInput) return;
+
+    [currentInput, maxInput].forEach((input) => {
+      input.addEventListener("change", () => {
+        clampNumberPair(currentId, maxId);
+        saveSheetStateToStorage();
+      });
+    });
+  });
+}
+
+function syncCharacterNameFields(sourceId, value) {
+  ["char-name", "profile-char-name"].forEach((id) => {
+    if (id === sourceId) return;
+    const input = document.getElementById(id);
+    if (input && input.value !== value) input.value = value;
+  });
+}
+
+function applyCharacterImageFromState() {
+  const preview = document.getElementById("char-image-preview");
+  const placeholder = document.getElementById("char-image-placeholder");
+  const profilePreview = document.getElementById("profile-char-image-preview");
+  const profilePlaceholder = document.getElementById("profile-char-image-placeholder");
+  const clearBtn = document.getElementById("clear-char-image-btn");
+  const image = sheetState.globals?.image || "";
+
+  if (!preview || !placeholder || !clearBtn) return;
+
+  if (image) {
+    preview.src = image;
+    preview.classList.remove("hidden");
+    placeholder.classList.add("hidden");
+    if (profilePreview) {
+      profilePreview.src = image;
+      profilePreview.classList.remove("hidden");
+    }
+    if (profilePlaceholder) profilePlaceholder.classList.add("hidden");
+    clearBtn.classList.remove("hidden");
+  } else {
+    preview.removeAttribute("src");
+    preview.classList.add("hidden");
+    placeholder.classList.remove("hidden");
+    if (profilePreview) {
+      profilePreview.removeAttribute("src");
+      profilePreview.classList.add("hidden");
+    }
+    if (profilePlaceholder) profilePlaceholder.classList.remove("hidden");
+    clearBtn.classList.add("hidden");
+  }
+}
+
+function setupCharacterImagePersistence() {
+  const input = document.getElementById("char-image-input");
+  const clearBtn = document.getElementById("clear-char-image-btn");
+
+  if (input) {
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        sheetState.globals.image = typeof reader.result === "string" ? reader.result : "";
+        applyCharacterImageFromState();
+        saveSheetStateToStorage();
+        input.value = "";
+      });
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      sheetState.globals.image = "";
+      applyCharacterImageFromState();
+      saveSheetStateToStorage();
+    });
+  }
 }

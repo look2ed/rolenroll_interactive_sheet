@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Role & Roll Interactive Character Sheet</title>
   <!-- Google tag (gtag.js) -->
@@ -13,7 +14,7 @@
 
     gtag('config', 'G-ZG63L28DHG');
   </script>
-  <link rel="stylesheet" href="style.css?v=4.11.15">
+  <link rel="stylesheet" href="style.css?v=5.0.0">
 </head>
 <body>
   <header class="page-header">
@@ -30,14 +31,41 @@
       <div id="sheet-tabs" class="sheet-tabs" aria-label="Character sheets"></div>
       <button type="button" id="new-sheet-btn" class="sheet-tab-add" aria-label="Add new character sheet" title="Add new character">+</button>
     </div>
-    <div class="version-badge">v4.11.15</div>
+    <div class="version-badge">v5.0.0</div>
   </header>
 
   <div class="layout">
     <!-- ================= LEFT: DICE PANEL ================= -->
     <div class="left-column">
-      <div class="dice-panel">
-        <h2>Dice Roller</h2>
+      <button
+        type="button"
+        id="manual-roll-toggle"
+        class="manual-roll-toggle"
+        aria-label="Roll the Dice"
+        aria-controls="dice-panel"
+        aria-expanded="false"
+        title="Roll the Dice"
+      >
+        <span aria-hidden="true">🎲</span>
+      </button>
+      <button
+        type="button"
+        id="dice-drawer-backdrop"
+        class="dice-drawer-backdrop hidden"
+        aria-label="Close manual roll panel"
+      ></button>
+      <div id="dice-panel" class="dice-panel" aria-hidden="true">
+        <div class="dice-panel-header">
+          <h2>Dice Roller</h2>
+          <button
+            type="button"
+            id="manual-roll-close"
+            class="manual-roll-close"
+            aria-label="Close manual roll panel"
+          >
+            ×
+          </button>
+        </div>
 
         <form id="dice-form">
           <div class="field">
@@ -56,13 +84,21 @@
             </button>
           </div>
 
-          <div class="field">
-            <label for="special">Special dice:</label>
-            <input
-              id="special"
-              type="text"
-              placeholder="e.g. a1, n1 (a = positive, n = negative)"
-            >
+          <div class="special-dice-builder" aria-labelledby="special-dice-title">
+            <div class="special-dice-builder-header">
+              <span id="special-dice-title">Special dice</span>
+              <span id="special-preview" class="special-preview">None</span>
+            </div>
+
+            <input id="special" type="hidden" value="">
+
+            <div id="special-dice-list" class="special-dice-list">
+              <p class="special-dice-empty">No special dice.</p>
+            </div>
+
+            <button type="button" id="add-special-die-btn" class="add-special-die-btn">
+              + Add Special Die
+            </button>
           </div>
 
           <div class="field">
@@ -102,10 +138,12 @@
             <li><strong>Total dice</strong> : จำนวนเต๋าที่ทอยในชุดแรกทั้งหมด</li>
             <li>
               <strong>Special dice</strong> :
-              ใช้รูปแบบ <code>aX</code> สำหรับเต๋าบัฟที่มีหน้า <code>+</code> จำนวน X หน้า,
-              และ <code>nY</code> สำหรับเต๋าดีบัฟที่มีหน้า <code>-</code> จำนวน Y หน้า<br>
-              ตัวอย่าง <code>a1,a1,n2</code> → เต๋าบัฟ 2 ลูก (มี + อย่างละ 1 หน้า),
-              เต๋าดีบัฟ 1 ลูก (มี - 2 หน้า) ส่วนเต๋าที่เหลือจะเป็นเต๋าปกติ
+              กด <strong>+ Add Special Die</strong> เพื่อสร้างเต๋าพิเศษ 1 ลูก
+              ในหน้าต่างแก้ไขจะมีหน้าเต๋า 6 หน้า โดยหน้าแรกเป็น <code>.</code>
+              และหน้าสุดท้ายเป็น <code>Ⓡ</code> ซึ่งแก้ไขไม่ได้<br>
+              หน้าเต๋าตรงกลาง 4 หน้าสามารถกดเพื่อเปลี่ยนวนระหว่าง
+              <code>ว่าง</code>, <code>+</code>, และ <code>-</code>
+              หากต้องการเต๋าพิเศษมากกว่า 1 ลูก ให้กดเพิ่มทีละลูก
             </li>
             <li>
               <strong>Success</strong> : คะแนนจากค่าสเตตัส/ความสามารถ/การจ่าย Will Power
@@ -125,8 +163,10 @@
           <p>
             ตัวอย่าง:<br>
             • <code>Total dice: 5</code> → เต๋าปกติ 5 ลูก <br>
-            • <code>Total dice: 5</code>, <code>Special dice: a1, n1</code>
-            → เต๋าปกติ จำนวน 3 ลูก, เต๋าบัฟ (+ 1 หน้า) จำนวน 1 ลูก, เต๋าดีบัฟ 1 ลูก (มี - 2 หน้า)
+            • <code>Total dice: 5</code> และเพิ่ม Special Die 1 ลูก
+            → เต๋าพิเศษ 1 ลูก และเต๋าปกติ 4 ลูก<br>
+            • ถ้าตั้งหน้าเต๋าพิเศษเป็น <code>. + - ว่าง ว่าง Ⓡ</code>
+            เต๋าลูกนั้นจะมีโอกาสออกแต้มพื้นฐาน, โทเคนบวก, โทเคนลบ, หน้าว่าง, หรือ R&amp;R
           </p>
         </div>
 
@@ -136,11 +176,12 @@
             <li><strong>Total dice</strong>: number of dice rolled in the first pool.</li>
             <li>
               <strong>Special dice</strong>:
-              use <code>aX</code> for one advantage die with X <code>+</code> faces,
-              <code>nY</code> for one negative die with Y <code>-</code> faces.<br>
-              Example: <code>a1,a1,n2</code> → 2 adv dice (+1 face), 1 neg die (2 - faces).
-              The remaining dice become normal dice so that
-              the total equals <em>Total dice</em>.
+              click <strong>+ Add Special Die</strong> to create one custom die.
+              The editor shows 6 faces. The first face is <code>.</code>
+              and the last face is <code>Ⓡ</code>; those two are locked.<br>
+              Click any of the 4 middle faces to cycle between
+              <code>blank</code>, <code>+</code>, and <code>-</code>.
+              Add more special dice one at a time if the roll needs them.
             </li>
             <li>
               <strong>Success</strong>: extra points from stats/abilities/Will Power, added
@@ -160,8 +201,10 @@
           <p>
             Examples:<br>
             • <code>Total dice: 5</code> → 5 normal dice<br>
-            • <code>Total dice: 5</code>, <code>Special dice: a1, n1</code>
-            → 3 normal, 1 adv die (+1 face), 1 neg die (-1 face)
+            • <code>Total dice: 5</code> with 1 Special Die
+            → 1 custom die and 4 normal dice<br>
+            • A custom die set to <code>. + - blank blank Ⓡ</code>
+            can roll a base point, plus token, minus token, blank face, or R&amp;R
           </p>
         </div>
       </div>
@@ -471,66 +514,140 @@
           <button type="button" id="delete-character-btn" class="delete-character-btn">Delete This Character</button>
         </div>
 
-        <!-- upper section: name, health, defense, will, mental hearts -->
-        <div class="sheet-header">
-        <div class="sheet-top-layout">
-          <div class="sheet-top-fields">
-            <div class="sheet-row">
-              <label for="char-name">Name</label>
-              <input type="text" id="char-name" class="char-name-input" placeholder="Character Name">
-            </div>
-            <div class="sheet-row">
-              <label for="char-level">Lv.</label>
-              <input type="number" id="char-level" min="0" value="0">
-              <label for="char-exp" class="sheet-inline-label">EXP.</label>
-              <input type="text" id="char-exp" placeholder="0/0">
-            </div>
-            <div class="sheet-row">
-              <label>Health</label>
-              <input type="number" id="char-health" min="0" value="10">
-              <span>/</span>
-              <input type="number" id="char-health-max" min="0" value="10">
-            </div>
-            <div class="sheet-row">
-              <label>Defense</label>
-              <input type="number" id="char-defense" min="0" value="0">
-            </div>
-            <div class="sheet-row">
-              <label>Will Power</label>
-              <input type="number" id="char-willpower" min="0" value="0">
-            </div>
-            <div class="sheet-row">
-              <label>Mental</label>
-              <div class="mental-hearts">
-                <!-- 18 hearts -->
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
-                <button type="button" class="mental-heart"></button>
+        <div class="character-info-tabs" role="tablist" aria-label="Character info sections">
+          <button type="button" class="character-info-tab is-active" role="tab" aria-selected="true" aria-controls="character-tab-basic" data-character-tab="basic">Basic Info</button>
+          <button type="button" class="character-info-tab" role="tab" aria-selected="false" aria-controls="character-tab-profile" data-character-tab="profile">Profile</button>
+          <button type="button" class="character-info-tab" role="tab" aria-selected="false" aria-controls="character-tab-status" data-character-tab="status">Status</button>
+          <button type="button" class="character-info-tab" role="tab" aria-selected="false" aria-controls="character-tab-equipment" data-character-tab="equipment">Equipment</button>
+        </div>
+
+        <div id="character-tab-basic" class="character-info-panel is-active" role="tabpanel" data-character-panel="basic">
+          <div class="sheet-header">
+            <div class="sheet-top-layout">
+              <div class="character-image-frame">
+                <label class="character-image-picker" for="char-image-input">
+                  <input type="file" id="char-image-input" accept="image/*">
+                  <img id="char-image-preview" class="char-image-preview hidden" alt="">
+                  <span id="char-image-placeholder" class="char-image-placeholder" aria-hidden="true">+</span>
+                </label>
+                <button type="button" id="clear-char-image-btn" class="clear-char-image-btn hidden" aria-label="Remove character image" title="Remove image">×</button>
+              </div>
+
+              <div class="sheet-top-fields">
+                <div class="sheet-row sheet-row-identity">
+                  <label for="char-name">Name</label>
+                  <input type="text" id="char-name" class="char-name-input" placeholder="Character Name">
+                  <label for="char-level">Lv.</label>
+                  <input type="number" id="char-level" min="0" value="0">
+                  <label for="char-exp" class="sheet-inline-label">EXP.</label>
+                  <input type="number" id="char-exp" min="0" value="0">
+                  <span>/</span>
+                  <input type="number" id="char-exp-max" min="0" value="0">
+                </div>
+                <div class="sheet-row">
+                  <label>Health</label>
+                  <input type="number" id="char-health" min="0" value="0">
+                  <span>/</span>
+                  <input type="number" id="char-health-max" min="0" value="0">
+                </div>
+                <div class="sheet-row">
+                  <label>Defense</label>
+                  <input type="number" id="char-defense" min="0" value="0" readonly>
+                </div>
+                <div class="sheet-row">
+                  <label>Will Power</label>
+                  <input type="number" id="char-willpower" min="0" value="0">
+                </div>
+                <div class="sheet-row">
+                  <label>Mental</label>
+                  <div class="mental-hearts">
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                    <button type="button" class="mental-heart"></button>
+                  </div>
+                </div>
+                <div class="sheet-row basic-status-row">
+                  <label class="basic-status-label">
+                    <span>Status Tag</span>
+                    <small>(double click to edit)</small>
+                  </label>
+                  <div id="basic-status-tags" class="basic-status-tags" aria-label="Statuses shown on first page">
+                    <span class="basic-status-empty">No status tags.</span>
+                  </div>
+                </div>
+                <div class="sheet-row basic-gear-row">
+                  <label>Gear</label>
+                  <div id="basic-gear-tags" class="basic-gear-tags" aria-label="Worn equipment shown on first page">
+                    <span class="basic-status-empty">No worn gear.</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
+        <div id="character-tab-profile" class="character-info-panel hidden" role="tabpanel" data-character-panel="profile">
+          <div class="profile-panel">
+            <div class="profile-summary">
+              <label class="profile-image-picker" for="char-image-input">
+                <img id="profile-char-image-preview" class="char-image-preview hidden" alt="">
+                <span id="profile-char-image-placeholder" class="char-image-placeholder" aria-hidden="true">+</span>
+              </label>
+
+              <label class="profile-field profile-name-field" for="profile-char-name">
+                <span>Name</span>
+                <input type="text" id="profile-char-name" placeholder="Character Name">
+              </label>
+
+              <div class="profile-detail-grid">
+                <label class="profile-field" for="char-gender">
+                  <span>Gender</span>
+                  <input type="text" id="char-gender">
+                </label>
+                <label class="profile-field" for="char-age">
+                  <span>Age</span>
+                  <input type="text" id="char-age">
+                </label>
+                <label class="profile-field" for="char-race">
+                  <span>Race</span>
+                  <input type="text" id="char-race">
+                </label>
+                <label class="profile-field" for="char-will-source">
+                  <span>Source of Will Power</span>
+                  <input type="text" id="char-will-source">
+                </label>
+              </div>
+            </div>
+
+            <label class="profile-field profile-background-field" for="char-background">
+              <span>Character Background</span>
+              <textarea id="char-background" class="profile-notes" rows="10"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div id="character-tab-status" class="character-info-panel hidden" role="tabpanel" data-character-panel="status">
           <div class="status-block status-block-top">
             <div class="equipment-header">
               <div class="equipment-title-row">
-                <h3 class="sheet-section-title equipment-title">Buff &amp; Debuff</h3>
+                <h3 class="sheet-section-title equipment-title">Status Effects</h3>
                 <button
                   type="button"
                   id="open-status-modal"
@@ -549,31 +666,60 @@
             </div>
           </div>
         </div>
-      </div>
-      </div>
 
-      <div class="sheet-card equipment-card">
-      <div class="equipment-block">
-        <div class="equipment-header">
-          <div class="equipment-title-row">
-            <h3 class="sheet-section-title equipment-title">Equipment</h3>
-            <button
-              type="button"
-              id="open-equipment-modal"
-              class="equipment-add-btn equipment-add-btn-small"
-              aria-haspopup="dialog"
-              aria-controls="equipment-modal"
-              onclick="openEquipmentModal()"
-            >
-              + Add
-            </button>
+        <div id="character-tab-equipment" class="character-info-panel hidden" role="tabpanel" data-character-panel="equipment">
+          <div class="equipment-block">
+            <div class="equipment-header">
+              <div class="equipment-title-row">
+                <h3 class="sheet-section-title equipment-title">Equipment</h3>
+                <button
+                  type="button"
+                  id="open-equipment-modal"
+                  class="equipment-add-btn equipment-add-btn-small"
+                  aria-haspopup="dialog"
+                  aria-controls="equipment-modal"
+                  onclick="openEquipmentModal()"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+
+            <div class="equipment-layout">
+              <div class="equipment-hands" aria-label="Equipment in hands">
+                <div class="equipment-hand-card" data-equipment-slot-panel="left-hand">
+                  <div class="equipment-hand-header">
+                    <h4>Left Hand</h4>
+                    <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="left-hand" aria-label="Add left hand equipment">+</button>
+                  </div>
+                  <div id="left-hand-equipment-list" class="equipment-slot-list">
+                    <p class="equipment-empty">Empty hand.</p>
+                  </div>
+                </div>
+
+                <div class="equipment-hand-card" data-equipment-slot-panel="right-hand">
+                  <div class="equipment-hand-header">
+                    <h4>Right Hand</h4>
+                    <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="right-hand" aria-label="Add right hand equipment">+</button>
+                  </div>
+                  <div id="right-hand-equipment-list" class="equipment-slot-list">
+                    <p class="equipment-empty">Empty hand.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="equipment-wearing">
+                <div class="equipment-wearing-header">
+                  <h4>Equipment (Wearing)</h4>
+                  <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="wearing" aria-label="Add worn equipment">+</button>
+                </div>
+                <div id="equipment-list" class="equipment-list">
+                  <p class="equipment-empty">No equipment yet.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div id="equipment-list" class="equipment-list">
-          <p class="equipment-empty">No equipment yet.</p>
-        </div>
-      </div>
       </div>
 
       <div
@@ -606,6 +752,24 @@
                 <input type="text" id="equipment-name" required>
               </label>
 
+              <div class="equipment-field equipment-slot-field">
+                <span>Equip to :</span>
+                <div class="status-type-toggle" role="radiogroup" aria-label="Equipment slot">
+                  <label class="status-type-option">
+                    <input type="radio" name="equipment-slot" value="left-hand">
+                    <span>Left Hand</span>
+                  </label>
+                  <label class="status-type-option">
+                    <input type="radio" name="equipment-slot" value="right-hand">
+                    <span>Right Hand</span>
+                  </label>
+                  <label class="status-type-option">
+                    <input type="radio" name="equipment-slot" value="wearing" checked>
+                    <span>Wearing</span>
+                  </label>
+                </div>
+              </div>
+
               <label class="equipment-field" for="equipment-description">
                 <span>Description :</span>
                 <textarea id="equipment-description" rows="4"></textarea>
@@ -621,25 +785,31 @@
                 </div>
               </div>
 
-              <label class="equipment-field" for="equipment-dmg">
-                <span>DMG :</span>
-                <input type="text" id="equipment-dmg">
-              </label>
-
-              <label class="equipment-field" for="equipment-charge">
-                <span>Charge :</span>
-                <input type="number" id="equipment-charge" min="0" value="0">
-              </label>
-
-              <label class="equipment-field" for="equipment-def">
-                <span>DEF :</span>
-                <input type="number" id="equipment-def" min="0" value="0">
-              </label>
-
-              <label class="equipment-field" for="equipment-toughness">
-                <span>Toughness :</span>
-                <input type="number" id="equipment-toughness" min="0" value="0">
-              </label>
+              <div class="equipment-field equipment-stats-field">
+                <span>Stats :</span>
+                <div class="equipment-stat-options">
+                  <label class="equipment-stat-option" for="equipment-has-dmg">
+                    <input type="checkbox" id="equipment-has-dmg" data-equipment-stat-toggle="dmg">
+                    <span>DMG</span>
+                    <input type="text" id="equipment-dmg" aria-label="Equipment DMG" disabled>
+                  </label>
+                  <label class="equipment-stat-option" for="equipment-has-charge">
+                    <input type="checkbox" id="equipment-has-charge" data-equipment-stat-toggle="charge">
+                    <span>Charge</span>
+                    <input type="number" id="equipment-charge" min="0" value="0" aria-label="Equipment charge" disabled>
+                  </label>
+                  <label class="equipment-stat-option" for="equipment-has-def">
+                    <input type="checkbox" id="equipment-has-def" data-equipment-stat-toggle="def">
+                    <span>DEF</span>
+                    <input type="number" id="equipment-def" min="0" value="0" aria-label="Equipment DEF" disabled>
+                  </label>
+                  <label class="equipment-stat-option" for="equipment-has-toughness">
+                    <input type="checkbox" id="equipment-has-toughness" data-equipment-stat-toggle="toughness">
+                    <span>Toughness</span>
+                    <input type="number" id="equipment-toughness" min="0" value="0" aria-label="Equipment toughness" disabled>
+                  </label>
+                </div>
+              </div>
 
               <div class="equipment-form-actions">
                 <button type="submit" id="save-equipment-btn">Add</button>
@@ -713,14 +883,22 @@
 
               <div class="equipment-field status-type-field">
                 <span>Type :</span>
-                <div class="status-type-toggle" role="radiogroup" aria-label="Buff or debuff">
+                <div class="status-type-toggle" role="radiogroup" aria-label="Status type">
                   <label class="status-type-option status-type-buff">
                     <input type="radio" name="status-type" value="buff" checked>
                     <span>Buff</span>
                   </label>
                   <label class="status-type-option status-type-debuff">
-                    <input type="radio" name="status-type" value="debuff">
-                    <span>Debuff</span>
+                    <input type="radio" name="status-type" value="injuries">
+                    <span>Injuries &amp; Disorders</span>
+                  </label>
+                  <label class="status-type-option status-type-debuff">
+                    <input type="radio" name="status-type" value="flaw">
+                    <span>Flaw</span>
+                  </label>
+                  <label class="status-type-option status-type-debuff">
+                    <input type="radio" name="status-type" value="psychiatric">
+                    <span>Psychiatric Disorder</span>
                   </label>
                 </div>
               </div>
@@ -730,14 +908,50 @@
                 <textarea id="status-details" rows="4"></textarea>
               </label>
 
-              <label class="equipment-field" for="status-duration">
-                <span>Duration :</span>
-                <input type="number" id="status-duration" min="0" value="1">
+              <label class="equipment-field status-first-page-field" for="status-show-basic">
+                <span>Display :</span>
+                <span class="status-checkbox-option">
+                  <input type="checkbox" id="status-show-basic">
+                  <span>Show on first page</span>
+                </span>
               </label>
+
+              <div class="equipment-field status-duration-field">
+                <span>Duration :</span>
+                <div class="status-type-toggle" role="radiogroup" aria-label="Duration type">
+                  <label class="status-type-option">
+                    <input type="radio" name="status-duration-kind" value="permanent" checked>
+                    <span>Permanent</span>
+                  </label>
+                  <label class="status-type-option">
+                    <input type="radio" name="status-duration-kind" value="temporary">
+                    <span>Temporary</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="status-temporary-options" class="equipment-field status-temporary-options hidden">
+                <span>Temporary until :</span>
+                <div class="status-type-toggle" role="radiogroup" aria-label="Temporary duration">
+                  <label class="status-type-option">
+                    <input type="radio" name="status-duration-mode" value="turns" checked>
+                    <span>Turns</span>
+                  </label>
+                  <label class="status-type-option">
+                    <input type="radio" name="status-duration-mode" value="skill-check">
+                    <span>Pass skill check</span>
+                  </label>
+                </div>
+                <label class="equipment-field status-turns-field" for="status-duration-turns">
+                  <span>Amount of turns :</span>
+                  <input type="number" id="status-duration-turns" min="0" value="1">
+                </label>
+              </div>
 
               <div class="equipment-form-actions">
                 <button type="submit" id="save-status-btn">Save</button>
                 <button type="button" id="cancel-status-btn">Cancel</button>
+                <button type="button" id="delete-status-btn" class="delete-status-btn hidden">Remove Status</button>
               </div>
             </form>
           </div>
@@ -772,6 +986,43 @@
               <button type="button" id="confirm-delete-character-btn" class="confirm-delete-btn">Confirm</button>
               <button type="button" id="cancel-delete-character-btn">Cancel</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="new-character-modal"
+        class="result-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-character-modal-title"
+      >
+        <div class="result-modal-backdrop" id="new-character-modal-backdrop"></div>
+        <div class="result-modal-panel delete-character-modal-panel">
+          <div class="result-modal-header">
+            <h2 id="new-character-modal-title">New Character</h2>
+            <button
+              type="button"
+              id="close-new-character-modal"
+              class="result-modal-close"
+              aria-label="Close new character dialog"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="result-modal-body">
+            <form id="new-character-form" class="equipment-form">
+              <label class="equipment-field" for="new-character-name">
+                <span>Name :</span>
+                <input type="text" id="new-character-name" required placeholder="Character Name">
+              </label>
+
+              <div class="equipment-form-actions">
+                <button type="submit" id="confirm-new-character-btn">Confirm</button>
+                <button type="button" id="cancel-new-character-btn">Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -1684,6 +1935,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=4.11.15"></script>
+  <script src="dice.js?v=5.0.0"></script>
 </body>
 </html>
