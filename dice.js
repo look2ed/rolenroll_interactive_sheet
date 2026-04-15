@@ -18,13 +18,20 @@ let specialDieDraftFaces = ["1", "", "", "", "", "R"];
 let specialDieEditIndex = -1;
 let pendingSheetRoll = null;
 let sheetRollSpecialDiceState = [];
+let sheetRollIgnoreMentalPenalty = false;
 
 const LEGACY_STORAGE_KEY = "rolenroll_sheet_state_v1";
 const SHEET_STORAGE_PREFIX = "rolenroll_sheet_state_v2_";
 const SHEET_INDEX_KEY = "rolenroll_sheet_index_v1";
 const ACTIVE_SHEET_KEY = "rolenroll_active_sheet_v1";
-const DEFAULT_HEART_COUNT = 20;
-const ATTRIBUTE_STARTING_POINTS = 9;
+const DEFAULT_HEART_COUNT = 12;
+const MAX_HEART_COUNT = 18;
+const MENTAL_MAX_KEY = "mentalMax";
+const BASE_HEALTH = 10;
+const HEALTH_PER_TOUGHNESS = 2;
+const BASE_WILL_POWER = 8;
+const ATTRIBUTE_STARTING_POINTS = 0;
+const ATTRIBUTE_DEFAULT_MAX_POINTS = 9;
 const ATTRIBUTE_MAX_POINTS_KEY = "attributeMaxPoints";
 const GENERAL_ABILITY_STARTING_POINTS = 18;
 const GENERAL_ABILITY_MAX_POINTS_KEY = "generalAbilityMaxPoints";
@@ -43,6 +50,7 @@ const sheetState = {
   equipment: [],
   statuses: [],
   items: [],
+  note: "",
   extraSkills: []
 };
 
@@ -53,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFloatingTooltips();
   setupSheetRollModal();
   setupSpecialDiceBuilder();
+  setupHeaderMessageControls();
 
   // 1) Load saved sheet state FIRST (so attrs/skills are ready)
   loadSheetStateFromStorage();
@@ -138,10 +147,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // 12) Items block and modal
   setupItems();
 
-  // 13) Extra skill block and modal
+  // 13) Note block and modal
+  setupNotes();
+
+  // 14) Extra skill block and modal
   setupExtraSkills();
 
-  // 14) Delete character controls
+  // 15) Delete character controls
   setupDeleteCharacterControls();
   setupNewCharacterControls();
   updateDeleteCharacterButton();
@@ -151,6 +163,7 @@ function setupV5Layout() {
   const sheetPanel = document.querySelector(".sheet-panel.sheet-column");
   const characterInfoCard = document.querySelector(".character-info-card");
   const itemsPanel = document.querySelector(".items-panel");
+  const notesPanel = document.querySelector(".notes-panel");
   const extraSkillPanel = document.querySelector(".extra-skill-panel");
   const attributesCard = document.querySelector(".attributes-card");
 
@@ -161,7 +174,14 @@ function setupV5Layout() {
       lowerLayout.className = "lower-sheet-layout";
     }
     characterInfoCard.after(lowerLayout);
-    lowerLayout.append(itemsPanel, attributesCard);
+    let inventoryStack = document.querySelector(".inventory-stack");
+    if (!inventoryStack) {
+      inventoryStack = document.createElement("div");
+      inventoryStack.className = "inventory-stack";
+    }
+    inventoryStack.append(itemsPanel);
+    if (notesPanel) inventoryStack.append(notesPanel);
+    lowerLayout.append(inventoryStack, attributesCard);
     setupProgressionTabs(attributesCard, extraSkillPanel);
   }
 
@@ -203,6 +223,63 @@ function setupV5Layout() {
   });
 }
 
+function setupHeaderMessageControls() {
+  const announcementBtn = document.getElementById("announcement-btn");
+  const developerModal = document.getElementById("developer-message-modal");
+  const developerBackdrop = document.getElementById("developer-message-modal-backdrop");
+  const closeDeveloperBtn = document.getElementById("close-developer-message-modal");
+  const developerContent = document.getElementById("developer-message-content");
+  const tipBtn = document.getElementById("tip-me-btn");
+  const tipModal = document.getElementById("tip-me-modal");
+  const tipBackdrop = document.getElementById("tip-me-modal-backdrop");
+  const closeTipBtn = document.getElementById("close-tip-me-modal");
+
+  function openModal(modal) {
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  async function openDeveloperMessage() {
+    if (developerContent) {
+      developerContent.textContent = "Loading message...";
+      try {
+        const response = await fetch(`developer-message.txt?v=5.3.6`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const message = (await response.text()).trim();
+        developerContent.textContent = message || "No developer message yet.";
+      } catch (error) {
+        console.warn("Could not load developer message:", error);
+        developerContent.textContent = "Could not load the developer message right now.";
+      }
+    }
+    openModal(developerModal);
+  }
+
+  if (announcementBtn) announcementBtn.addEventListener("click", openDeveloperMessage);
+  if (closeDeveloperBtn) closeDeveloperBtn.addEventListener("click", () => closeModal(developerModal));
+  if (developerBackdrop) developerBackdrop.addEventListener("click", () => closeModal(developerModal));
+  if (tipBtn) tipBtn.addEventListener("click", () => openModal(tipModal));
+  if (closeTipBtn) closeTipBtn.addEventListener("click", () => closeModal(tipModal));
+  if (tipBackdrop) tipBackdrop.addEventListener("click", () => closeModal(tipModal));
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (developerModal && !developerModal.classList.contains("hidden")) {
+      closeModal(developerModal);
+    }
+    if (tipModal && !tipModal.classList.contains("hidden")) {
+      closeModal(tipModal);
+    }
+  });
+}
+
 function setupProgressionTabs(card, extraSkillPanel) {
   if (!card || card.dataset.progressionTabsReady === "true") return;
 
@@ -239,12 +316,20 @@ function setupProgressionTabs(card, extraSkillPanel) {
   attrHeader.className = "attribute-tab-header";
   if (attrSubtitle) attrHeader.append(attrSubtitle);
   attrHeader.insertAdjacentHTML("beforeend", `
-    <div class="attribute-points-box" id="attribute-points-box" title="Double click to edit maximum points">
+    <div class="attribute-points-box" id="attribute-points-box">
       <span>Remaining</span>
-      <strong id="attribute-remaining-points">${ATTRIBUTE_STARTING_POINTS}</strong>
+      <strong id="attribute-remaining-points">0</strong>
       <span class="attribute-points-divider">/</span>
       <span>Max</span>
-      <strong id="attribute-max-points">${ATTRIBUTE_STARTING_POINTS}</strong>
+      <strong id="attribute-max-points">${ATTRIBUTE_DEFAULT_MAX_POINTS}</strong>
+      <button
+        type="button"
+        class="inline-help-icon attribute-points-help"
+        data-tooltip="Double click to modify maximum Attribute points."
+        aria-label="Attribute points help"
+      >
+        ?
+      </button>
     </div>
   `);
   setupAttributePointsBox(attrHeader.querySelector("#attribute-points-box"));
@@ -261,12 +346,20 @@ function setupProgressionTabs(card, extraSkillPanel) {
   gaHeader.className = "attribute-tab-header";
   gaHeader.innerHTML = `
     <p class="sheet-subtitle">Click dots to set 1-6 points. Tick checkbox to have +1 Succeed.</p>
-    <div class="attribute-points-box" id="general-ability-points-box" title="Double click to edit maximum points">
+    <div class="attribute-points-box" id="general-ability-points-box">
       <span>Remaining</span>
       <strong id="general-ability-remaining-points">${GENERAL_ABILITY_STARTING_POINTS}</strong>
       <span class="attribute-points-divider">/</span>
       <span>Max</span>
       <strong id="general-ability-max-points">${GENERAL_ABILITY_STARTING_POINTS}</strong>
+      <button
+        type="button"
+        class="inline-help-icon attribute-points-help"
+        data-tooltip="Double click to modify maximum General Ability points."
+        aria-label="General Ability points help"
+      >
+        ?
+      </button>
     </div>
   `;
   setupGeneralAbilityPointsBox(gaHeader.querySelector("#general-ability-points-box"));
@@ -366,14 +459,14 @@ function getSpentAttributePoints() {
     .reduce((total, row) => {
       const key = row.dataset.stat;
       const value = sheetState.attrs[key] ?? 1;
-      return total + Math.max(0, value - 1);
+      return total + Math.max(1, value);
     }, 0);
 }
 
 function getAttributeMaxPoints() {
   const raw = sheetState.globals?.[ATTRIBUTE_MAX_POINTS_KEY];
-  const parsed = parseInt(raw ?? ATTRIBUTE_STARTING_POINTS, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : ATTRIBUTE_STARTING_POINTS;
+  const parsed = parseInt(raw ?? ATTRIBUTE_DEFAULT_MAX_POINTS, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : ATTRIBUTE_DEFAULT_MAX_POINTS;
 }
 
 function getRemainingAttributePoints() {
@@ -468,6 +561,7 @@ function setupSheetRollModal() {
   function close() {
     modal.classList.add("hidden");
     pendingSheetRoll = null;
+    sheetRollIgnoreMentalPenalty = false;
     document.body.style.overflow = "";
   }
 
@@ -485,7 +579,8 @@ function setupSheetRollModal() {
       specialStr,
       success,
       penalty,
-      equipmentDmg: pendingSheetRoll.equipmentDmg ?? null
+      equipmentDmg: pendingSheetRoll.equipmentDmg ?? null,
+      ignoreMentalPenalty: sheetRollIgnoreMentalPenalty
     });
     close();
   });
@@ -498,6 +593,14 @@ function setupSheetRollModal() {
     renderSheetRollSpecialDice(modal);
   });
   specialList?.addEventListener("click", (event) => {
+    const mentalRemoveBtn = event.target.closest("[data-sheet-mental-remove]");
+    if (mentalRemoveBtn) {
+      if (!confirmRemove("Remove the automatic Mental penalty from this roll?")) return;
+      sheetRollIgnoreMentalPenalty = true;
+      renderSheetRollSpecialDice(modal);
+      return;
+    }
+
     const removeBtn = event.target.closest("[data-sheet-special-remove]");
     if (removeBtn) {
       const index = parseInt(removeBtn.dataset.sheetSpecialRemove || "-1", 10);
@@ -591,6 +694,7 @@ function ensureSheetRollModal() {
 
 function openSheetRollModal(payload) {
   const modal = ensureSheetRollModal();
+  sheetRollIgnoreMentalPenalty = false;
   pendingSheetRoll = {
     label: payload.label || "Roll",
     detail: payload.detail || "",
@@ -642,18 +746,43 @@ function renderSheetRollSpecialDice(modal) {
   if (!input || !list) return;
 
   input.value = serializeCustomSpecialDice(sheetRollSpecialDiceState);
+  const mentalPenaltyFaces = sheetRollIgnoreMentalPenalty ? 0 : getMentalPenaltyFaces();
+  const mentalPenaltyLabel = mentalPenaltyFaces > 0 ? `Mental penalty n${mentalPenaltyFaces}` : "";
   if (preview) {
-    preview.textContent = sheetRollSpecialDiceState.length
-      ? `${sheetRollSpecialDiceState.length} custom ${sheetRollSpecialDiceState.length === 1 ? "die" : "dice"}`
-      : "None";
+    const previewParts = [];
+    if (sheetRollSpecialDiceState.length) {
+      previewParts.push(`${sheetRollSpecialDiceState.length} custom ${sheetRollSpecialDiceState.length === 1 ? "die" : "dice"}`);
+    }
+    if (mentalPenaltyLabel) previewParts.push(mentalPenaltyLabel);
+    preview.textContent = previewParts.length ? previewParts.join(" + ") : "None";
   }
 
-  if (!sheetRollSpecialDiceState.length) {
+  const mentalPenaltyCard = mentalPenaltyFaces > 0
+    ? `
+      <div class="special-die-card sheet-roll-special-die-card mental-penalty-die-card">
+        <div class="special-die-card-faces" aria-label="Automatic Mental penalty die">
+          ${buildDieFaces({ kind: "neg", minusCount: mentalPenaltyFaces }).map((face, faceIndex) => `
+            <button
+              type="button"
+              class="special-die-editor-face ${getSpecialFaceClass(face)}"
+              disabled
+            >
+              ${getSpecialFaceDisplay(face, faceIndex)}
+            </button>
+          `).join("")}
+        </div>
+        <span class="mental-penalty-label">Auto Mental penalty: n${mentalPenaltyFaces}</span>
+        <button type="button" class="icon-action-btn equipment-remove-btn" data-sheet-mental-remove aria-label="Remove automatic Mental penalty">⌫</button>
+      </div>
+    `
+    : "";
+
+  if (!sheetRollSpecialDiceState.length && !mentalPenaltyCard) {
     list.innerHTML = '<p class="special-dice-empty">No special dice.</p>';
     return;
   }
 
-  list.innerHTML = sheetRollSpecialDiceState
+  const customDiceHtml = sheetRollSpecialDiceState
     .map((faces, dieIndex) => `
       <div class="special-die-card sheet-roll-special-die-card">
         <div class="special-die-card-faces" aria-label="Special die ${dieIndex + 1} faces">
@@ -673,6 +802,8 @@ function renderSheetRollSpecialDice(modal) {
       </div>
     `)
     .join("");
+
+  list.innerHTML = `${customDiceHtml}${mentalPenaltyCard}`;
 }
 
 function setupCharacterInfoTabs() {
@@ -737,7 +868,15 @@ function setupFloatingTooltips() {
     if (!text || !tooltip) return;
 
     activeTarget = target;
-    tooltip.textContent = text;
+    tooltip.textContent = "";
+    text.split("\n").forEach((line) => {
+      const lineEl = document.createElement("div");
+      lineEl.textContent = line;
+      if (line.trim().toLowerCase() === "double click to edit") {
+        lineEl.className = "floating-tooltip-action";
+      }
+      tooltip.append(lineEl);
+    });
     positionTooltip(target);
   }
 
@@ -969,7 +1108,35 @@ function createSheetId() {
 }
 
 function getDefaultHearts() {
-  return Array.from({ length: DEFAULT_HEART_COUNT }, () => true);
+  return Array.from({ length: MAX_HEART_COUNT }, () => true);
+}
+
+function getMentalMax() {
+  const raw = sheetState.globals?.[MENTAL_MAX_KEY];
+  const parsed = parseInt(raw ?? DEFAULT_HEART_COUNT, 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_HEART_COUNT;
+  return Math.max(1, Math.min(MAX_HEART_COUNT, parsed));
+}
+
+function getNormalizedHeartState() {
+  const source = Array.isArray(sheetState.hearts) && sheetState.hearts.length
+    ? sheetState.hearts
+    : getDefaultHearts();
+  return Array.from({ length: MAX_HEART_COUNT }, (_, index) => source[index] !== false);
+}
+
+function getCurrentMentalValue() {
+  const mentalMax = getMentalMax();
+  const hearts = getNormalizedHeartState();
+  return hearts.slice(0, mentalMax).filter(Boolean).length;
+}
+
+function getMentalDamage() {
+  return Math.max(0, getMentalMax() - getCurrentMentalValue());
+}
+
+function getMentalPenaltyFaces() {
+  return Math.floor(getMentalDamage() / 3);
 }
 
 function createDefaultSheetPayload(name = "") {
@@ -983,10 +1150,10 @@ function createDefaultSheetPayload(name = "") {
       level: "0",
       exp: "0",
       expMax: "0",
-      health: "0",
-      healthMax: "0",
+      health: String(BASE_HEALTH),
+      healthMax: String(BASE_HEALTH),
       defense: "0",
-      will: "0",
+      will: String(BASE_WILL_POWER),
       profile: "",
       gender: "",
       age: "",
@@ -994,13 +1161,15 @@ function createDefaultSheetPayload(name = "") {
       willSource: "",
       background: "",
       image: "",
-      [ATTRIBUTE_MAX_POINTS_KEY]: String(ATTRIBUTE_STARTING_POINTS),
+      [MENTAL_MAX_KEY]: String(DEFAULT_HEART_COUNT),
+      [ATTRIBUTE_MAX_POINTS_KEY]: String(ATTRIBUTE_DEFAULT_MAX_POINTS),
       [GENERAL_ABILITY_MAX_POINTS_KEY]: String(GENERAL_ABILITY_STARTING_POINTS),
       [EXTRA_SKILL_MAX_POINTS_KEY]: String(EXTRA_SKILL_STARTING_POINTS)
     },
     equipment: [],
     statuses: [],
     items: [],
+    note: "",
     extraSkills: []
   };
 }
@@ -1255,6 +1424,7 @@ function resetSheetState() {
   sheetState.equipment = [];
   sheetState.statuses = [];
   sheetState.items = [];
+  sheetState.note = "";
   sheetState.extraSkills = [];
 }
 
@@ -1284,15 +1454,7 @@ function applySheetStateToUI() {
   clampExpFields();
   clampHealthFields();
 
-  const hearts = document.querySelectorAll(".mental-heart");
-  const heartState = Array.isArray(sheetState.hearts) && sheetState.hearts.length
-    ? sheetState.hearts
-    : getDefaultHearts();
-  hearts.forEach((btn, idx) => {
-    const on = heartState[idx] !== false;
-    btn.classList.remove("on", "off");
-    btn.classList.add(on ? "on" : "off");
-  });
+  applyMentalHeartsToUI();
 
   document.querySelectorAll('.stat-row[data-role="attr"]').forEach((row) => {
     const key = row.dataset.stat;
@@ -1314,8 +1476,10 @@ function applySheetStateToUI() {
   renderEquipmentList();
   renderStatusList();
   renderItemList();
+  renderNotePanel();
   renderExtraSkillList();
   applyCharacterImageFromState();
+  updateDerivedCharacterVitals();
   renderSheetTabs();
   updateDeleteCharacterButton();
 }
@@ -2114,6 +2278,40 @@ function updateDerivedDefenseFromGear() {
   if (sheetState.globals) sheetState.globals.defense = String(totalDef);
 }
 
+function updateDerivedCharacterVitals() {
+  const healthInput = document.getElementById("char-health");
+  const healthMaxInput = document.getElementById("char-health-max");
+  const willInput = document.getElementById("char-willpower");
+
+  const toughness = Math.max(0, parseInt(sheetState.attrs?.tou ?? "0", 10) || 0);
+  const sanity = Math.max(0, parseInt(sheetState.attrs?.san ?? "0", 10) || 0);
+  const nextHealthMax = BASE_HEALTH + (toughness * HEALTH_PER_TOUGHNESS);
+  const nextWill = BASE_WILL_POWER + sanity;
+
+  if (healthInput && healthMaxInput) {
+    const previousMax = parseInt(healthMaxInput.value || String(nextHealthMax), 10);
+    const previousCurrent = parseInt(healthInput.value || String(previousMax), 10);
+    const safePreviousMax = Number.isFinite(previousMax) && previousMax >= 0 ? previousMax : nextHealthMax;
+    const safePreviousCurrent = Number.isFinite(previousCurrent) && previousCurrent >= 0
+      ? previousCurrent
+      : safePreviousMax;
+    const missingHealth = Math.max(0, safePreviousMax - safePreviousCurrent);
+    const nextCurrent = Math.max(0, nextHealthMax - missingHealth);
+
+    healthMaxInput.value = String(nextHealthMax);
+    healthInput.value = String(nextCurrent);
+    if (sheetState.globals) {
+      sheetState.globals.health = String(nextCurrent);
+      sheetState.globals.healthMax = String(nextHealthMax);
+    }
+  }
+
+  if (willInput) {
+    willInput.value = String(nextWill);
+    if (sheetState.globals) sheetState.globals.will = String(nextWill);
+  }
+}
+
 function renderBasicGearTags() {
   const container = document.getElementById("basic-gear-tags");
   if (!container) return;
@@ -2135,7 +2333,13 @@ function renderBasicGearTags() {
       item.stats?.toughness ? `Tough ${item.toughness || 0}` : ""
     ].filter(Boolean).join(" | ");
     const slotLabel = getEquipmentSlotLabel(item.slot);
-    const tooltip = [item.name || "Equipment", slotLabel, stats, item.description || ""].filter(Boolean).join("\n");
+    const tooltip = [
+      item.name || "Equipment",
+      slotLabel,
+      stats,
+      item.description || "",
+      "Double click to edit"
+    ].filter(Boolean).join("\n");
     const rollButton = isEquipmentRollable(item)
       ? `<button type="button" class="basic-gear-roll-btn" data-basic-equipment-roll-id="${escapeHtml(item.id || "")}" aria-label="Roll ${escapeHtml(item.name || "equipment")}">Roll</button>`
       : "";
@@ -2340,7 +2544,6 @@ function populateStatusForm(item) {
   const idInput = document.getElementById("status-id");
   const nameInput = document.getElementById("status-name");
   const detailsInput = document.getElementById("status-details");
-  const showBasicInput = document.getElementById("status-show-basic");
   const durationTurnsInput = document.getElementById("status-duration-turns");
   const typeInputs = document.querySelectorAll('input[name="status-type"]');
   const durationKindInputs = document.querySelectorAll('input[name="status-duration-kind"]');
@@ -2352,7 +2555,6 @@ function populateStatusForm(item) {
     if (idInput) idInput.value = "";
     nameInput.value = "";
     if (detailsInput) detailsInput.value = "";
-    if (showBasicInput) showBasicInput.checked = false;
     if (durationTurnsInput) durationTurnsInput.value = "1";
     typeInputs.forEach((input) => {
       input.checked = input.value === "buff";
@@ -2371,7 +2573,6 @@ function populateStatusForm(item) {
   nameInput.value = item.name || "";
   if (detailsInput) detailsInput.value = item.details || "";
   const normalized = normalizeStatusItem(item);
-  if (showBasicInput) showBasicInput.checked = !!normalized.showOnBasic;
   if (durationTurnsInput) durationTurnsInput.value = normalized.durationTurns ?? 1;
   typeInputs.forEach((input) => {
     input.checked = input.value === normalized.type;
@@ -2394,7 +2595,6 @@ function onStatusSubmit(event) {
   const selectedType = document.querySelector('input[name="status-type"]:checked');
   const selectedDurationKind = document.querySelector('input[name="status-duration-kind"]:checked');
   const selectedDurationMode = document.querySelector('input[name="status-duration-mode"]:checked');
-  const showBasicInput = document.getElementById("status-show-basic");
   const durationTurnsInput = document.getElementById("status-duration-turns");
 
   if (!nameInput) return;
@@ -2419,7 +2619,7 @@ function onStatusSubmit(event) {
     durationKind,
     durationMode,
     durationTurns,
-    showOnBasic: !!showBasicInput?.checked,
+    showOnBasic: true,
     type: normalizeStatusType(selectedType?.value || "buff")
   };
 
@@ -2507,7 +2707,7 @@ function renderBasicStatusTags() {
   if (!container) return;
 
   const visibleStatuses = Array.isArray(sheetState.statuses)
-    ? sheetState.statuses.map(normalizeStatusItem).filter((item) => item.showOnBasic)
+    ? sheetState.statuses.map(normalizeStatusItem)
     : [];
 
   if (visibleStatuses.length === 0) {
@@ -2576,7 +2776,7 @@ function normalizeStatusItem(item) {
     durationMode,
     durationTurns,
     duration: durationTurns,
-    showOnBasic: !!item?.showOnBasic
+    showOnBasic: true
   };
 }
 
@@ -2598,7 +2798,7 @@ function getStatusDurationText(item) {
 
 function getStatusTooltipText(item) {
   const details = item.details ? `\n${item.details}` : "";
-  return `${getStatusTypeLabel(item.type)}\n${getStatusDurationText(item)}${details}`;
+  return `${getStatusTypeLabel(item.type)}\n${getStatusDurationText(item)}${details}\nDouble click to edit`;
 }
 
 function updateStatusDurationFormVisibility() {
@@ -2863,6 +3063,166 @@ function getItemTooltipText(item) {
   const amount = item?.amount ?? 0;
   const details = item?.details ? `\n${item.details}` : "\nNo details.";
   return `${item?.name || "Item"}\nAmount: ${amount}${details}`;
+}
+
+function normalizeSavedNote(note) {
+  if (typeof note === "string") return note;
+  if (note && typeof note === "object" && typeof note.content === "string") {
+    return note.content;
+  }
+  return "";
+}
+
+function setupNotes() {
+  const closeBtn = document.getElementById("close-note-modal");
+  const cancelBtn = document.getElementById("cancel-note-btn");
+  const backdrop = document.getElementById("note-modal-backdrop");
+  const form = document.getElementById("note-form");
+  const card = document.getElementById("note-card");
+
+  if (!form || !card) return;
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeNoteModal);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", closeNoteModal);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeNoteModal);
+  }
+
+  form.addEventListener("submit", onNoteSubmit);
+
+  card.addEventListener("click", (event) => {
+    const actionBtn = event.target.closest("button[data-note-action]");
+    if (!actionBtn) return;
+
+    const action = actionBtn.dataset.noteAction;
+    if (action === "view") {
+      openNoteModal("view");
+      return;
+    }
+    if (action === "edit") {
+      openNoteModal("edit");
+      return;
+    }
+    if (action === "remove") {
+      removeNote();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("note-modal");
+    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeNoteModal();
+    }
+  });
+
+  renderNotePanel();
+}
+
+function openNoteModal(mode = "edit") {
+  const modal = document.getElementById("note-modal");
+  const title = document.getElementById("note-modal-title");
+  const textarea = document.getElementById("note-content");
+  const saveBtn = document.getElementById("save-note-btn");
+  const form = document.getElementById("note-form");
+
+  if (!modal || !textarea || !form) return;
+
+  const hasNote = !!normalizeSavedNote(sheetState.note).trim();
+  const isView = mode === "view";
+
+  textarea.value = normalizeSavedNote(sheetState.note);
+  textarea.readOnly = isView;
+  form.dataset.noteMode = mode;
+
+  if (title) {
+    title.textContent = isView ? "View Note" : hasNote ? "Edit Note" : "Add Note";
+  }
+  if (saveBtn) {
+    saveBtn.classList.toggle("hidden", isView);
+  }
+
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  if (!isView) {
+    setTimeout(() => textarea.focus(), 0);
+  }
+}
+
+function closeNoteModal() {
+  const modal = document.getElementById("note-modal");
+  const form = document.getElementById("note-form");
+  const textarea = document.getElementById("note-content");
+  const title = document.getElementById("note-modal-title");
+  const saveBtn = document.getElementById("save-note-btn");
+
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+  if (textarea) {
+    textarea.value = "";
+    textarea.readOnly = false;
+  }
+  if (form) {
+    form.dataset.noteMode = "edit";
+  }
+  if (title) {
+    title.textContent = "Add Note";
+  }
+  if (saveBtn) {
+    saveBtn.classList.remove("hidden");
+  }
+
+  document.body.style.overflow = "";
+}
+
+function onNoteSubmit(event) {
+  event.preventDefault();
+
+  const textarea = document.getElementById("note-content");
+  if (!textarea) return;
+
+  sheetState.note = textarea.value.trim();
+  saveSheetStateToStorage();
+  renderNotePanel();
+  closeNoteModal();
+}
+
+function removeNote() {
+  if (!confirmRemove("Delete this note?")) return false;
+  sheetState.note = "";
+  saveSheetStateToStorage();
+  renderNotePanel();
+  return true;
+}
+
+function renderNotePanel() {
+  const card = document.getElementById("note-card");
+  if (!card) return;
+
+  const note = normalizeSavedNote(sheetState.note).trim();
+
+  if (!note) {
+    card.innerHTML = '<button type="button" class="equipment-empty note-empty-button" data-note-action="edit">No note yet. Click to add note.</button>';
+    return;
+  }
+
+  const preview = note.length > 320 ? `${note.slice(0, 320)}...` : note;
+  card.innerHTML = `
+    <div class="note-preview-card">
+      <p class="note-preview-text">${escapeHtml(preview)}</p>
+      <div class="note-actions" aria-label="Note actions">
+        <button type="button" class="note-action-btn" data-note-action="view">View</button>
+        <button type="button" class="note-action-btn" data-note-action="edit">Edit</button>
+        <button type="button" class="note-action-btn equipment-remove-btn" data-note-action="remove">Delete</button>
+      </div>
+    </div>
+  `;
 }
 
 function setupExtraSkills() {
@@ -3696,7 +4056,7 @@ function renderHistory() {
 
 // ---------- core roll executor (used by form + stats) ----------
 
-function performRoll({ total, specialStr, success = 0, penalty = 0, equipmentDmg = null }) {
+function performRoll({ total, specialStr, success = 0, penalty = 0, equipmentDmg = null, ignoreMentalPenalty = false }) {
   const totalNum = parseInt(total ?? 0, 10);
   if (isNaN(totalNum) || totalNum <= 0) {
     alert("Please enter a valid total number of dice (at least 1).");
@@ -3723,8 +4083,13 @@ function performRoll({ total, specialStr, success = 0, penalty = 0, equipmentDmg
     return;
   }
 
+  const mentalPenaltyFaces = ignoreMentalPenalty ? 0 : getMentalPenaltyFaces();
+  if (mentalPenaltyFaces > 0) {
+    specialConfigs.push({ kind: "neg", minusCount: mentalPenaltyFaces });
+  }
+
   if (specialConfigs.length > totalNum) {
-    alert("Number of special dice (a/n) cannot be more than Total dice.");
+    alert("Number of special dice plus Mental penalty die cannot be more than Total dice.");
     return;
   }
 
@@ -3810,7 +4175,10 @@ function performRoll({ total, specialStr, success = 0, penalty = 0, equipmentDmg
   const entry = {
     time: Date.now(),
     totalDice: totalNum,
-    special: formatSpecialDiceText(specialStr),
+    special: [
+      formatSpecialDiceText(specialStr),
+      mentalPenaltyFaces ? `Mental penalty: n${mentalPenaltyFaces}` : ""
+    ].filter(Boolean).join(" / "),
     success: succ,
     penalty: pen,
     diceTotal,
@@ -3857,9 +4225,47 @@ function onSubmit(e) {
 
 // ---------- Character sheet: mental hearts ----------
 
+function applyMentalHeartsToUI() {
+  const hearts = document.querySelectorAll(".mental-heart");
+  if (!hearts.length) return;
+
+  const mentalMax = getMentalMax();
+  const heartState = getNormalizedHeartState();
+  const mentalMaxInput = document.getElementById("mental-max");
+
+  if (mentalMaxInput) {
+    mentalMaxInput.value = String(mentalMax);
+  }
+
+  hearts.forEach((btn, idx) => {
+    const isVisible = idx < mentalMax;
+    const on = heartState[idx] !== false;
+    btn.classList.toggle("hidden", !isVisible);
+    btn.classList.remove("on", "off");
+    btn.classList.add(on ? "on" : "off");
+    btn.setAttribute("aria-label", `Mental heart ${idx + 1}`);
+    btn.setAttribute("aria-pressed", on.toString());
+  });
+
+  updateMentalSummary();
+}
+
+function updateMentalSummary() {
+  const current = document.getElementById("mental-current");
+  if (!current) return;
+
+  const visibleHearts = Array.from(document.querySelectorAll(".mental-heart"))
+    .filter((btn) => !btn.classList.contains("hidden"));
+  const visibleValue = visibleHearts.length
+    ? visibleHearts.filter((btn) => !btn.classList.contains("off")).length
+    : getCurrentMentalValue();
+  current.textContent = String(visibleValue);
+}
+
 function setupMentalHearts() {
   const hearts = document.querySelectorAll(".mental-heart");
   if (!hearts.length) return;
+  const mentalMaxInput = document.getElementById("mental-max");
 
   hearts.forEach((btn, idx) => {
     btn.dataset.index = String(idx + 1);
@@ -3877,9 +4283,26 @@ function setupMentalHearts() {
         btn.classList.remove("off");
         btn.classList.add("on");
       }
+      btn.setAttribute("aria-pressed", btn.classList.contains("on").toString());
+      updateMentalSummary();
       saveSheetStateToStorage();
     });
   });
+
+  if (mentalMaxInput) {
+    mentalMaxInput.addEventListener("input", () => {
+      let nextMax = parseInt(mentalMaxInput.value || String(DEFAULT_HEART_COUNT), 10);
+      if (Number.isNaN(nextMax)) nextMax = DEFAULT_HEART_COUNT;
+      nextMax = Math.max(1, Math.min(MAX_HEART_COUNT, nextMax));
+      mentalMaxInput.value = String(nextMax);
+      sheetState.globals[MENTAL_MAX_KEY] = String(nextMax);
+      sheetState.hearts = getNormalizedHeartState();
+      applyMentalHeartsToUI();
+      saveSheetStateToStorage();
+    });
+  }
+
+  applyMentalHeartsToUI();
 }
 
 // ---------- Character sheet: stats (attributes + skills) ----------
@@ -4094,14 +4517,20 @@ function initDotsForRow(row, store, key) {
       }
       store[key] = nextVal;
       updateStatDots(row, nextVal);
-      if (isAttributeRow) updateAttributeRemainingDisplay();
+      if (isAttributeRow) {
+        updateAttributeRemainingDisplay();
+        updateDerivedCharacterVitals();
+      }
       if (isGeneralAbilityRow) updateGeneralAbilityRemainingDisplay();
       saveSheetStateToStorage();
     });
   });
 
   updateStatDots(row, store[key]);
-  if (isAttributeRow) updateAttributeRemainingDisplay();
+  if (isAttributeRow) {
+    updateAttributeRemainingDisplay();
+    updateDerivedCharacterVitals();
+  }
   if (isGeneralAbilityRow) updateGeneralAbilityRemainingDisplay();
 }
 
@@ -4121,8 +4550,9 @@ function saveSheetStateToStorage() {
   try {
     if (!currentSheetId) return;
     clampExpFields();
-    clampHealthFields();
     updateDerivedDefenseFromGear();
+    updateDerivedCharacterVitals();
+    clampHealthFields();
 
     const hearts = Array.from(document.querySelectorAll(".mental-heart")).map(
       (btn) => !btn.classList.contains("off") // true if ON, false if OFF
@@ -4154,6 +4584,7 @@ function saveSheetStateToStorage() {
       }
     });
     globals.image = sheetState.globals?.image || "";
+    globals[MENTAL_MAX_KEY] = String(getMentalMax());
     globals[ATTRIBUTE_MAX_POINTS_KEY] = String(getAttributeMaxPoints());
     globals[GENERAL_ABILITY_MAX_POINTS_KEY] = String(getGeneralAbilityMaxPoints());
     globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(getExtraSkillMaxPoints());
@@ -4170,6 +4601,7 @@ function saveSheetStateToStorage() {
       equipment: sheetState.equipment || [],
       statuses: sheetState.statuses || [],
       items: sheetState.items || [],
+      note: sheetState.note || "",
       extraSkills: sheetState.extraSkills || []
     };
 
@@ -4194,6 +4626,7 @@ function loadSheetStateFromStorage() {
       Object.assign(sheetState.successChecks, fallback.successChecks);
       sheetState.hearts = fallback.hearts;
       sheetState.globals = fallback.globals;
+      sheetState.note = fallback.note;
       return;
     }
 
@@ -4218,6 +4651,7 @@ function loadSheetStateFromStorage() {
     sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
     sheetState.statuses = Array.isArray(data.statuses) ? data.statuses : [];
     sheetState.items = Array.isArray(data.items) ? data.items : [];
+    sheetState.note = normalizeSavedNote(data.note);
     sheetState.extraSkills = Array.isArray(data.extraSkills) ? data.extraSkills : [];
 
     const globalMap = [
@@ -4244,12 +4678,7 @@ function loadSheetStateFromStorage() {
       }
     });
 
-    const hearts = document.querySelectorAll(".mental-heart");
-    hearts.forEach((btn, idx) => {
-      const on = sheetState.hearts[idx] !== false;
-      btn.classList.remove("on", "off");
-      btn.classList.add(on ? "on" : "off");
-    });
+    applyMentalHeartsToUI();
   } catch (e) {
     console.warn("Could not load sheet state:", e);
   }
@@ -4288,10 +4717,13 @@ function setupGlobalFieldPersistence() {
         sheetState.globals.exp = document.getElementById("char-exp")?.value ?? "0";
         sheetState.globals.expMax = document.getElementById("char-exp-max")?.value ?? "0";
       }
-      if (key === "health" || key === "healthMax") {
-        clampHealthFields();
-        sheetState.globals.health = document.getElementById("char-health")?.value ?? "0";
-        sheetState.globals.healthMax = document.getElementById("char-health-max")?.value ?? "0";
+    if (key === "health" || key === "healthMax") {
+      clampHealthFields();
+      sheetState.globals.health = document.getElementById("char-health")?.value ?? "0";
+      sheetState.globals.healthMax = document.getElementById("char-health-max")?.value ?? "0";
+    }
+      if (key === "will") {
+        updateDerivedCharacterVitals();
       }
       saveSheetStateToStorage();
     });

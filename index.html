@@ -14,25 +14,121 @@
 
     gtag('config', 'G-ZG63L28DHG');
   </script>
-  <link rel="stylesheet" href="style.css?v=5.3.2">
+  <link rel="stylesheet" href="style.css?v=5.3.6">
 </head>
 <body>
   <header class="page-header">
-    <a
-      class="manual-guide-link"
-      href="https://docs.google.com/presentation/d/1Wtvd2dQCMv2vVI6EU_NdaVYpV_TXluaCFJABs73hNi4/edit?usp=sharing"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Manual Guide
-    </a>
-    <h1>Role &amp; Roll Interactive Character Sheet</h1>
+    <div class="page-header-left-actions">
+      <a
+        class="manual-guide-link"
+        href="https://docs.google.com/presentation/d/1Wtvd2dQCMv2vVI6EU_NdaVYpV_TXluaCFJABs73hNi4/edit?usp=sharing"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Manual Guide
+      </a>
+      <button
+        type="button"
+        id="announcement-btn"
+        class="header-icon-btn"
+        aria-label="Announcement"
+        title="Announcement"
+        aria-haspopup="dialog"
+        aria-controls="developer-message-modal"
+      >
+        !
+      </button>
+    </div>
+    <h1>Role &amp; Roll Unofficial Interactive Character Sheet</h1>
     <div class="page-header-tools">
       <div id="sheet-tabs" class="sheet-tabs" aria-label="Character sheets"></div>
       <button type="button" id="new-sheet-btn" class="sheet-tab-add" aria-label="Add new character sheet" title="Add new character">+</button>
     </div>
-    <div class="version-badge">v5.3.2</div>
+    <div class="page-header-right-actions">
+      <button
+        type="button"
+        id="tip-me-btn"
+        class="tip-me-btn"
+        aria-haspopup="dialog"
+        aria-controls="tip-me-modal"
+      >
+        Tip Me
+      </button>
+      <button
+        type="button"
+        class="header-icon-btn"
+        aria-label="Contact by email"
+        title="Contact"
+      >
+        ✉
+      </button>
+      <div class="version-badge">v5.3.6</div>
+    </div>
   </header>
+
+  <div
+    id="developer-message-modal"
+    class="result-modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="developer-message-modal-title"
+  >
+    <div class="result-modal-backdrop" id="developer-message-modal-backdrop"></div>
+    <div class="result-modal-panel header-message-modal-panel">
+      <div class="result-modal-header">
+        <h2 id="developer-message-modal-title">Message from Developer</h2>
+        <button
+          type="button"
+          id="close-developer-message-modal"
+          class="result-modal-close"
+          aria-label="Close developer message"
+        >
+          ×
+        </button>
+      </div>
+      <div class="result-modal-body">
+        <div id="developer-message-content" class="developer-message-content">
+          Loading message...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="tip-me-modal"
+    class="result-modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tip-me-modal-title"
+  >
+    <div class="result-modal-backdrop" id="tip-me-modal-backdrop"></div>
+    <div class="result-modal-panel header-message-modal-panel">
+      <div class="result-modal-header">
+        <h2 id="tip-me-modal-title">Tip Me</h2>
+        <button
+          type="button"
+          id="close-tip-me-modal"
+          class="result-modal-close"
+          aria-label="Close tip me message"
+        >
+          ×
+        </button>
+      </div>
+      <div class="result-modal-body tip-me-body">
+        <p>If you like the project, you can buy me a coffee (or Bubble tea) here</p>
+        <a
+          class="buy-coffee-link"
+          href="https://buymeacoffee.com/look2ed"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span aria-hidden="true">☕</span>
+          Buy Me a Coffee
+        </a>
+        <p>Thank you for your love and support!</p>
+      </div>
+    </div>
+  </div>
 
   <div class="layout">
     <!-- ================= LEFT: DICE PANEL ================= -->
@@ -322,18 +418,40 @@
         </div>
       </div>
 
+      <div class="notes-panel">
+        <div class="items-block notes-block">
+          <div class="equipment-header">
+            <div class="equipment-title-row">
+              <h3 class="sheet-section-title equipment-title">Note</h3>
+            </div>
+          </div>
+
+          <div id="note-card" class="note-card">
+            <p class="equipment-empty">No note yet.</p>
+          </div>
+        </div>
+      </div>
+
       <div class="extra-skill-panel">
         <div class="items-block">
           <div class="equipment-header">
             <div class="equipment-title-row">
               <h3 class="sheet-section-title equipment-title">Extra Skill</h3>
               <div class="extra-skill-header-actions">
-                <div class="attribute-points-box extra-skill-points-box" id="extra-skill-points-box" title="Double click to edit maximum points">
+                <div class="attribute-points-box extra-skill-points-box" id="extra-skill-points-box">
                   <span>Remaining</span>
                   <strong id="extra-skill-remaining-points">6</strong>
                   <span class="attribute-points-divider">/</span>
                   <span>Max</span>
                   <strong id="extra-skill-max-points">6</strong>
+                  <button
+                    type="button"
+                    class="inline-help-icon attribute-points-help"
+                    data-tooltip="Double click to modify maximum Extra Skill points."
+                    aria-label="Extra Skill points help"
+                  >
+                    ?
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -466,6 +584,43 @@
       </div>
 
       <div
+        id="note-modal"
+        class="result-modal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="note-modal-title"
+      >
+        <div class="result-modal-backdrop" id="note-modal-backdrop"></div>
+        <div class="result-modal-panel equipment-modal-panel note-modal-panel">
+          <div class="result-modal-header">
+            <h2 id="note-modal-title">Add Note</h2>
+            <button
+              type="button"
+              id="close-note-modal"
+              class="result-modal-close"
+              aria-label="Close note"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="result-modal-body">
+            <form id="note-form" class="equipment-form note-form">
+              <label class="equipment-field note-content-field" for="note-content">
+                <span>Note :</span>
+                <textarea id="note-content" rows="12"></textarea>
+              </label>
+
+              <div class="equipment-form-actions">
+                <button type="submit" id="save-note-btn">Save</button>
+                <button type="button" id="cancel-note-btn">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div
         id="item-modal"
         class="result-modal hidden"
         role="dialog"
@@ -555,55 +710,72 @@
                 </div>
                 <div class="sheet-row">
                   <label>Health</label>
-                  <input type="number" id="char-health" min="0" value="0">
+                  <input type="number" id="char-health" min="0" value="10">
                   <span>/</span>
-                  <input type="number" id="char-health-max" min="0" value="0">
+                  <input type="number" id="char-health-max" min="0" value="10" readonly>
                 </div>
                 <div class="sheet-row">
                   <label for="char-defense">Defense</label>
                   <input type="number" id="char-defense" min="0" value="0" readonly>
-                  <span class="computed-field-note">(computed from equipment stat)</span>
+                  <button
+                    type="button"
+                    class="inline-help-icon"
+                    data-tooltip="Defense is computed from worn equipment with DEF enabled."
+                    aria-label="Defense calculation help"
+                  >
+                    ?
+                  </button>
                 </div>
                 <div class="sheet-row">
                   <label>Will Power</label>
-                  <input type="number" id="char-willpower" min="0" value="0">
+                  <input type="number" id="char-willpower" min="0" value="8" readonly>
                 </div>
-                <div class="sheet-row">
+                <div class="sheet-row mental-row">
                   <label>Mental</label>
-                  <div class="mental-hearts">
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
-                    <button type="button" class="mental-heart"></button>
+                  <div class="mental-control">
+                    <div class="mental-hearts">
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                      <button type="button" class="mental-heart"></button>
+                    </div>
+                    <div class="mental-summary">
+                      <strong id="mental-current">12</strong>
+                      <span>/</span>
+                      <input type="number" id="mental-max" min="1" max="18" value="12" aria-label="Maximum Mental hearts">
+                      <button
+                        type="button"
+                        class="inline-help-icon"
+                        data-tooltip="Every 3 lost Mental hearts adds 1 minus face to one negative die automatically. 3 lost = n1, 6 lost = n2."
+                        aria-label="Mental penalty help"
+                      >
+                        ?
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div class="sheet-row basic-status-row">
-                  <label class="basic-status-label">
-                    <span>Status Tag</span>
-                    <small>(double click to edit)</small>
-                  </label>
+                  <label class="basic-status-label">Status Tag</label>
                   <div id="basic-status-tags" class="basic-status-tags" aria-label="Statuses shown on first page">
                     <span class="basic-status-empty">No status tags.</span>
                   </div>
                 </div>
                 <div class="sheet-row basic-gear-row">
-                  <label>Equipment(s)</label>
+                  <label class="basic-status-label">Equipment</label>
                   <div id="basic-gear-tags" class="basic-gear-tags" aria-label="Worn equipment shown on first page">
                     <span class="basic-status-empty">No worn gear.</span>
                   </div>
@@ -913,14 +1085,6 @@
               <label class="equipment-field" for="status-details">
                 <span>Details :</span>
                 <textarea id="status-details" rows="4"></textarea>
-              </label>
-
-              <label class="equipment-field status-first-page-field" for="status-show-basic">
-                <span>Display :</span>
-                <span class="status-checkbox-option">
-                  <input type="checkbox" id="status-show-basic">
-                  <span>Show on first page</span>
-                </span>
               </label>
 
               <div class="equipment-field status-duration-field">
@@ -1942,6 +2106,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=5.3.2"></script>
+  <script src="dice.js?v=5.3.6"></script>
 </body>
 </html>

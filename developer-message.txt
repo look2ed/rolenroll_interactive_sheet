@@ -1,0 +1,3 @@
+Welcome to Role & Roll Unofficial Interactive Character Sheet.
+
+You can edit this developer-message.txt file whenever you want to announce major changes, updates, or reminders to players.
