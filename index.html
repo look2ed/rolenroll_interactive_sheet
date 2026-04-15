@@ -14,7 +14,7 @@
 
     gtag('config', 'G-ZG63L28DHG');
   </script>
-  <link rel="stylesheet" href="style.css?v=5.0.0">
+  <link rel="stylesheet" href="style.css?v=5.3.2">
 </head>
 <body>
   <header class="page-header">
@@ -31,7 +31,7 @@
       <div id="sheet-tabs" class="sheet-tabs" aria-label="Character sheets"></div>
       <button type="button" id="new-sheet-btn" class="sheet-tab-add" aria-label="Add new character sheet" title="Add new character">+</button>
     </div>
-    <div class="version-badge">v5.0.0</div>
+    <div class="version-badge">v5.3.2</div>
   </header>
 
   <div class="layout">
@@ -102,7 +102,7 @@
           </div>
 
           <div class="field">
-            <label for="success">Success:</label>
+            <label for="success">Succeed:</label>
             <input id="success" type="number" min="0" value="0">
           </div>
 
@@ -146,7 +146,7 @@
               หากต้องการเต๋าพิเศษมากกว่า 1 ลูก ให้กดเพิ่มทีละลูก
             </li>
             <li>
-              <strong>Success</strong> : คะแนนจากค่าสเตตัส/ความสามารถ/การจ่าย Will Power
+              <strong>Succeed</strong> : คะแนนจากค่าสเตตัส/ความสามารถ/การจ่าย Will Power
               ที่นำไปบวกเพิ่มทีหลังจากผลเต๋า
             </li>
             <li>
@@ -184,7 +184,7 @@
               Add more special dice one at a time if the roll needs them.
             </li>
             <li>
-              <strong>Success</strong>: extra points from stats/abilities/Will Power, added
+              <strong>Succeed</strong>: extra points from stats/abilities/Will Power, added
               after the dice total.
             </li>
             <li>
@@ -260,7 +260,7 @@
                 <strong>- token(s) :</strong> <span id="minus-tokens">0</span>
               </div>
               <div>
-                <strong>Success :</strong> <span id="stat-success">0</span>
+                <strong>Succeed :</strong> <span id="stat-success">0</span>
                 &nbsp;
                 <strong>Penalty :</strong> <span id="stat-penalty">0</span>
               </div>
@@ -302,7 +302,7 @@
         <div class="items-block">
           <div class="equipment-header">
             <div class="equipment-title-row">
-              <h3 class="sheet-section-title equipment-title">Items</h3>
+              <h3 class="sheet-section-title equipment-title">Inventory</h3>
               <button
                 type="button"
                 id="open-item-modal"
@@ -327,16 +327,25 @@
           <div class="equipment-header">
             <div class="equipment-title-row">
               <h3 class="sheet-section-title equipment-title">Extra Skill</h3>
-              <button
-                type="button"
-                id="open-extra-skill-modal"
-                class="equipment-add-btn equipment-add-btn-small"
-                aria-haspopup="dialog"
-                aria-controls="extra-skill-modal"
-                onclick="openExtraSkillModal()"
-              >
-                + Add
-              </button>
+              <div class="extra-skill-header-actions">
+                <div class="attribute-points-box extra-skill-points-box" id="extra-skill-points-box" title="Double click to edit maximum points">
+                  <span>Remaining</span>
+                  <strong id="extra-skill-remaining-points">6</strong>
+                  <span class="attribute-points-divider">/</span>
+                  <span>Max</span>
+                  <strong id="extra-skill-max-points">6</strong>
+                </div>
+                <button
+                  type="button"
+                  id="open-extra-skill-modal"
+                  class="equipment-add-btn equipment-add-btn-small"
+                  aria-haspopup="dialog"
+                  aria-controls="extra-skill-modal"
+                  onclick="openExtraSkillModal()"
+                >
+                  + Add
+                </button>
+              </div>
             </div>
           </div>
 
@@ -412,7 +421,7 @@
                 <label class="profession-toggle" for="extra-skill-profession">
                   <span>Profession :</span>
                   <input type="checkbox" id="extra-skill-profession">
-                  <span>+1 Success</span>
+                  <span>+1 Succeed</span>
                 </label>
               </div>
 
@@ -551,8 +560,9 @@
                   <input type="number" id="char-health-max" min="0" value="0">
                 </div>
                 <div class="sheet-row">
-                  <label>Defense</label>
+                  <label for="char-defense">Defense</label>
                   <input type="number" id="char-defense" min="0" value="0" readonly>
+                  <span class="computed-field-note">(computed from equipment stat)</span>
                 </div>
                 <div class="sheet-row">
                   <label>Will Power</label>
@@ -593,7 +603,7 @@
                   </div>
                 </div>
                 <div class="sheet-row basic-gear-row">
-                  <label>Gear</label>
+                  <label>Equipment(s)</label>
                   <div id="basic-gear-tags" class="basic-gear-tags" aria-label="Worn equipment shown on first page">
                     <span class="basic-status-empty">No worn gear.</span>
                   </div>
@@ -671,7 +681,6 @@
           <div class="equipment-block">
             <div class="equipment-header">
               <div class="equipment-title-row">
-                <h3 class="sheet-section-title equipment-title">Equipment</h3>
                 <button
                   type="button"
                   id="open-equipment-modal"
@@ -690,7 +699,6 @@
                 <div class="equipment-hand-card" data-equipment-slot-panel="left-hand">
                   <div class="equipment-hand-header">
                     <h4>Left Hand</h4>
-                    <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="left-hand" aria-label="Add left hand equipment">+</button>
                   </div>
                   <div id="left-hand-equipment-list" class="equipment-slot-list">
                     <p class="equipment-empty">Empty hand.</p>
@@ -700,7 +708,6 @@
                 <div class="equipment-hand-card" data-equipment-slot-panel="right-hand">
                   <div class="equipment-hand-header">
                     <h4>Right Hand</h4>
-                    <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="right-hand" aria-label="Add right hand equipment">+</button>
                   </div>
                   <div id="right-hand-equipment-list" class="equipment-slot-list">
                     <p class="equipment-empty">Empty hand.</p>
@@ -710,8 +717,7 @@
 
               <div class="equipment-wearing">
                 <div class="equipment-wearing-header">
-                  <h4>Equipment (Wearing)</h4>
-                  <button type="button" class="equipment-slot-add-btn" data-equipment-add-slot="wearing" aria-label="Add worn equipment">+</button>
+                  <h4>Wearing Gear</h4>
                 </div>
                 <div id="equipment-list" class="equipment-list">
                   <p class="equipment-empty">No equipment yet.</p>
@@ -814,6 +820,7 @@
               <div class="equipment-form-actions">
                 <button type="submit" id="save-equipment-btn">Add</button>
                 <button type="button" id="cancel-equipment-btn">Cancel</button>
+                <button type="button" id="delete-equipment-btn" class="delete-equipment-btn hidden">Remove Equipment</button>
               </div>
             </form>
           </div>
@@ -1031,7 +1038,7 @@
       <!-- ===== Attributes ===== -->
       <h3 class="sheet-section-title">Attributes</h3>
       <p class="sheet-subtitle">
-        Click dots to set 0–6 points. Tick ✓ to add +1 Success to that roll.
+        Click dots to set 1-6 points. Tick checkbox to have +1 Succeed.
       </p>
 
       <div class="stat-section">
@@ -1048,7 +1055,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1066,7 +1073,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1084,7 +1091,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1102,7 +1109,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1120,7 +1127,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1138,7 +1145,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1156,7 +1163,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1174,7 +1181,7 @@
           </div>
           <label class="stat-bonus">
             <input type="checkbox" class="stat-succeed">
-            +1 Success
+            +1 Succeed
           </label>
           <button type="button" class="stat-roll-btn">Roll</button>
         </div>
@@ -1208,7 +1215,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1231,7 +1238,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1254,7 +1261,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1277,7 +1284,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1300,7 +1307,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1323,7 +1330,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1346,7 +1353,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1369,7 +1376,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1392,7 +1399,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1415,7 +1422,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1438,7 +1445,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1469,7 +1476,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1492,7 +1499,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1515,7 +1522,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1538,7 +1545,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1561,7 +1568,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1584,7 +1591,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1607,7 +1614,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1630,7 +1637,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1653,7 +1660,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1676,7 +1683,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1707,7 +1714,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1730,7 +1737,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1753,7 +1760,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1776,7 +1783,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1799,7 +1806,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1822,7 +1829,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1845,7 +1852,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1868,7 +1875,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1891,7 +1898,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1914,7 +1921,7 @@
               <div class="stat-controls">
                 <label class="stat-bonus">
                   <input type="checkbox" class="stat-succeed">
-                  +1 success
+                  +1 Succeed
                 </label>
                 <button type="button" class="stat-roll-btn">Roll</button>
               </div>
@@ -1935,6 +1942,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=5.0.0"></script>
+  <script src="dice.js?v=5.3.2"></script>
 </body>
 </html>

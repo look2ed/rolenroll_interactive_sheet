@@ -304,6 +304,13 @@ code {
   gap: 1rem;
 }
 
+.lower-sheet-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
 .dice-panel,
 .items-panel,
 .extra-skill-panel,
@@ -318,6 +325,11 @@ code {
 .items-panel,
 .extra-skill-panel {
   padding: 1rem;
+}
+
+.lower-sheet-layout .items-panel,
+.progression-card {
+  min-width: 0;
 }
 
 .manual-roll-toggle {
@@ -925,6 +937,7 @@ body.dice-drawer-open .dice-panel {
 
 .delete-character-btn,
 .confirm-delete-btn,
+.delete-equipment-btn,
 .delete-status-btn,
 .equipment-remove-btn {
   border-color: rgba(166, 77, 67, 0.35);
@@ -934,6 +947,7 @@ body.dice-drawer-open .dice-panel {
 
 .delete-character-btn:hover,
 .confirm-delete-btn:hover,
+.delete-equipment-btn:hover,
 .delete-status-btn:hover,
 .equipment-remove-btn:hover {
   border-color: var(--red);
@@ -949,7 +963,7 @@ body.dice-drawer-open .dice-panel {
 .sheet-top-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  gap: 0.9rem;
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -1053,14 +1067,15 @@ body.dice-drawer-open .dice-panel {
 .sheet-row:first-child,
 .sheet-row:has(.mental-hearts) {
   grid-column: 1 / -1;
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
 }
 
 .sheet-row:has(#char-health) {
-  grid-column: 1 / span 6;
+  grid-column: 1 / span 5;
 }
 
 .sheet-row:has(#char-defense) {
-  grid-column: 1 / span 6;
+  grid-column: 1 / span 5;
 }
 
 .sheet-row:has(#char-willpower) {
@@ -1075,6 +1090,14 @@ body.dice-drawer-open .dice-panel {
 
 .sheet-row > label.sheet-inline-label {
   margin-left: 0;
+}
+
+.computed-field-note {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-align: left;
 }
 
 .sheet-row input#char-name.char-name-input {
@@ -1094,17 +1117,37 @@ body.dice-drawer-open .dice-panel {
 
 .sheet-row:has(#char-level):not(.sheet-row-identity),
 .sheet-row:has(#char-health) {
-  grid-template-columns: minmax(72px, auto) minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr) auto minmax(0, 1fr);
 }
 
-.sheet-row:has(#char-defense),
 .sheet-row:has(#char-willpower) {
   grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
 }
 
+.sheet-row:has(#char-defense) {
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr) minmax(160px, auto);
+}
+
+#char-defense[readonly] {
+  border-style: dashed;
+  border-color: rgba(35, 84, 90, 0.22);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(35, 84, 90, 0.045) 0,
+      rgba(35, 84, 90, 0.045) 8px,
+      rgba(255, 255, 255, 0.42) 8px,
+      rgba(255, 255, 255, 0.42) 16px
+    ),
+    rgba(248, 246, 239, 0.72);
+  color: var(--muted);
+  cursor: default;
+}
+
 .sheet-row-identity {
   grid-column: 1 / -1;
-  grid-template-columns: auto minmax(180px, 1fr) auto 72px auto 78px auto 78px;
+  grid-template-columns: auto minmax(180px, 1fr) auto 72px auto 78px auto 78px !important;
+  align-items: center;
 }
 
 .sheet-row span {
@@ -1153,20 +1196,26 @@ body.dice-drawer-open .dice-panel {
 .basic-status-row {
   grid-column: 7 / -1;
   grid-row: 2 / span 2;
-  grid-template-columns: minmax(118px, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(118px, 118px) minmax(0, 1fr);
   align-items: start;
 }
 
 .basic-gear-row {
   grid-column: 7 / -1;
   grid-row: 4;
-  grid-template-columns: minmax(118px, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(118px, 118px) minmax(0, 1fr);
   align-items: start;
 }
 
 .basic-status-label {
   display: grid;
   gap: 0.15rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.basic-gear-row > label {
+  text-align: center;
 }
 
 .basic-status-label small {
@@ -1208,6 +1257,23 @@ body.dice-drawer-open .dice-panel {
   line-height: 1.15;
 }
 
+.basic-gear-roll-btn {
+  width: auto;
+  min-height: 22px;
+  padding: 0.12rem 0.42rem;
+  border-color: rgba(35, 84, 90, 0.25);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--brand);
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.basic-gear-roll-btn:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
 .basic-status-turns {
   display: inline-flex;
   align-items: center;
@@ -1237,38 +1303,23 @@ body.dice-drawer-open .dice-panel {
   color: #5b451e;
 }
 
-.basic-status-tag::after,
-.basic-gear-tag::after {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 8px);
-  z-index: 20;
+.floating-tooltip {
+  position: fixed;
+  z-index: 3000;
   width: max-content;
-  max-width: min(320px, 75vw);
+  max-width: min(360px, calc(100vw - 24px));
   padding: 0.62rem 0.72rem;
   border: 1px solid rgba(35, 84, 90, 0.18);
   border-radius: var(--radius-sm);
   background: #ffffff;
   box-shadow: var(--shadow);
   color: #22241f;
-  content: attr(data-tooltip);
   font-size: 0.78rem;
   font-weight: 750;
   line-height: 1.35;
-  opacity: 0;
   pointer-events: none;
   text-align: left;
-  transform: translate(-50%, -4px);
-  transition: opacity 0.16s ease, transform 0.16s ease;
   white-space: pre-line;
-}
-
-.basic-status-tag:hover::after,
-.basic-status-tag:focus-visible::after,
-.basic-gear-tag:hover::after,
-.basic-gear-tag:focus-visible::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 .status-block-top {
@@ -1281,7 +1332,7 @@ body.dice-drawer-open .dice-panel {
 
 .profile-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr);
+  grid-template-columns: minmax(620px, 1.35fr) minmax(300px, 0.65fr);
   gap: 0.9rem;
   align-items: start;
   height: 100%;
@@ -1291,7 +1342,7 @@ body.dice-drawer-open .dice-panel {
 
 .profile-summary {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   grid-template-rows: auto auto;
   gap: 0.75rem;
   align-items: start;
@@ -1302,7 +1353,8 @@ body.dice-drawer-open .dice-panel {
   display: grid;
   grid-row: 1 / 3;
   place-items: center;
-  width: 170px;
+  justify-self: end;
+  width: 220px;
   aspect-ratio: 3 / 4;
   border: 1px dashed rgba(35, 84, 90, 0.30);
   border-radius: var(--radius);
@@ -1379,6 +1431,23 @@ body.dice-drawer-open .dice-panel {
   gap: 0.75rem;
 }
 
+.extra-skill-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+}
+
+.extra-skill-points-box {
+  min-height: 34px;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.76rem;
+}
+
+.equipment-block > .equipment-header .equipment-title-row {
+  justify-content: flex-end;
+}
+
 .equipment-add-btn {
   min-height: 34px;
   padding: 0.35rem 0.7rem;
@@ -1430,6 +1499,7 @@ body.dice-drawer-open .dice-panel {
 .equipment-hand-header {
   display: grid;
   justify-items: center;
+  justify-content: center;
 }
 
 .equipment-hand-header h4,
@@ -1474,6 +1544,14 @@ body.dice-drawer-open .dice-panel {
   display: grid;
   gap: 0.65rem;
   margin-top: 0.75rem;
+}
+
+.progression-extra-skill-panel .extra-skill-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.18rem;
 }
 
 .equipment-layout .equipment-list {
@@ -1525,6 +1603,17 @@ body.dice-drawer-open .dice-panel {
   border-radius: var(--radius);
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(25, 28, 22, 0.05);
+}
+
+.progression-extra-skill-panel .extra-skill-card {
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.progression-extra-skill-panel .extra-skill-actions {
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .status-item-buff {
@@ -1657,10 +1746,204 @@ body.dice-drawer-open .dice-panel {
   gap: 0.95rem;
 }
 
+.progression-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.2rem;
+}
+
+.progression-tab {
+  width: auto;
+  min-height: 38px;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.progression-tab.is-active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #ffffff;
+  box-shadow: 0 7px 14px rgba(35, 84, 90, 0.16);
+}
+
+.progression-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.95rem;
+  height: 465px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.progression-extra-skill-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  height: 100%;
+}
+
+.progression-extra-skill-panel .items-block {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.attribute-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.attribute-tab-header .sheet-subtitle {
+  margin: 0;
+}
+
+.attribute-points-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  min-height: 38px;
+  padding: 0.38rem 0.68rem;
+  border: 1px solid rgba(35, 84, 90, 0.18);
+  border-radius: var(--radius-sm);
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.attribute-points-box strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 26px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--brand-dark);
+}
+
+.attribute-points-divider {
+  color: var(--muted);
+}
+
 .stat-section {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
+}
+
+.progression-panel > .stat-section {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.18rem;
+}
+
+.attribute-group-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.attribute-group {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.attribute-group-title {
+  margin: 0;
+  color: var(--gold);
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.attribute-group .stat-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.attribute-group .stat-dots {
+  flex-wrap: wrap;
+  grid-column: 1;
+}
+
+.attribute-group .stat-bonus {
+  grid-column: 2;
+  grid-row: 2;
+  justify-content: center;
+  align-self: center;
+}
+
+.attribute-group .stat-roll-btn {
+  grid-column: 1 / -1;
+}
+
+.sheet-roll-context,
+.sheet-roll-note,
+.sheet-roll-number-row,
+.sheet-roll-special-builder {
+  grid-column: 1 / -1;
+}
+
+.sheet-roll-context {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(35, 84, 90, 0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.sheet-roll-context strong {
+  color: var(--brand-dark);
+  font-size: 1.05rem;
+}
+
+.sheet-roll-context span,
+.sheet-roll-note {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.sheet-roll-note {
+  margin: 0;
+}
+
+.sheet-roll-number-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.sheet-roll-special-builder {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(35, 84, 90, 0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.sheet-roll-special-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 0.18rem;
+}
+
+.sheet-roll-special-die-card .special-die-card-faces {
+  flex: 1 1 auto;
 }
 
 .stat-row {
@@ -1725,6 +2008,28 @@ body.dice-drawer-open .dice-panel {
   font-size: 0;
 }
 
+.ability-grid .stat-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ability-grid .stat-dots {
+  grid-column: 1;
+}
+
+.ability-grid .stat-controls {
+  display: contents;
+}
+
+.ability-grid .stat-bonus {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.ability-grid .stat-roll-btn {
+  grid-column: 1 / -1;
+}
+
 .stat-bonus input {
   width: 18px;
   height: 18px;
@@ -1742,6 +2047,13 @@ body.dice-drawer-open .dice-panel {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+.progression-panel[data-progression-panel="general-ability"] .ga-columns {
+  align-items: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.18rem;
 }
 
 .ability-section {
@@ -1788,6 +2100,34 @@ body.dice-drawer-open .dice-panel {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.ability-grid .stat-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ability-grid .stat-dots {
+  grid-column: 1;
+}
+
+.ability-grid .stat-controls {
+  display: contents;
+}
+
+.ability-grid .stat-bonus {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+}
+
+.ability-grid .stat-roll-btn {
+  grid-column: 1 / -1;
+}
+
+.items-panel .item-list {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 0.18rem;
 }
 
 /* ===== Forms and modals ===== */
@@ -2121,7 +2461,7 @@ body.dice-drawer-open .dice-panel {
   }
 
   .character-image-frame {
-    width: min(100%, 190px);
+    width: min(100%, 220px);
   }
 
   .ga-columns {
@@ -2153,6 +2493,8 @@ body.dice-drawer-open .dice-panel {
 
   .sheet-top-layout,
   .sheet-top-fields,
+  .lower-sheet-layout,
+  .attribute-tab-header,
   .profile-panel,
   .profile-summary,
   .stat-section,
@@ -2160,8 +2502,13 @@ body.dice-drawer-open .dice-panel {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .attribute-tab-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .profile-image-picker {
-    width: min(100%, 190px);
+    width: min(100%, 220px);
     grid-row: auto;
   }
 
@@ -2211,6 +2558,14 @@ body.dice-drawer-open .dice-panel {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .progression-extra-skill-panel .extra-skill-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .progression-panel {
+    height: 465px;
+  }
+
   .equipment-item-actions,
   .status-item-actions,
   .extra-skill-actions,
@@ -2220,6 +2575,7 @@ body.dice-drawer-open .dice-panel {
   }
 
   .equipment-form,
+  .sheet-roll-number-row,
   .dependency-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2238,13 +2594,17 @@ body.dice-drawer-open .dice-panel {
   }
 
   .character-info-header,
-  .equipment-title-row {
+  .equipment-title-row,
+  .extra-skill-header-actions {
     align-items: flex-start;
     flex-direction: column;
   }
 
+  .extra-skill-header-actions {
+    margin-left: 0;
+  }
+
   .sheet-row,
-  .sheet-row-identity,
   .basic-status-row,
   .basic-gear-row,
   .sheet-row:has(#char-level):not(.sheet-row-identity),
@@ -2254,6 +2614,11 @@ body.dice-drawer-open .dice-panel {
     grid-column: 1 / -1;
     grid-row: auto;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sheet-row-identity {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(120px, 1fr) auto 62px auto 66px auto 66px !important;
   }
 
   .sheet-row span {

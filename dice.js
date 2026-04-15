@@ -16,12 +16,20 @@ let newCharacterModal;
 let specialDiceBuilderState = [];
 let specialDieDraftFaces = ["1", "", "", "", "", "R"];
 let specialDieEditIndex = -1;
+let pendingSheetRoll = null;
+let sheetRollSpecialDiceState = [];
 
 const LEGACY_STORAGE_KEY = "rolenroll_sheet_state_v1";
 const SHEET_STORAGE_PREFIX = "rolenroll_sheet_state_v2_";
 const SHEET_INDEX_KEY = "rolenroll_sheet_index_v1";
 const ACTIVE_SHEET_KEY = "rolenroll_active_sheet_v1";
 const DEFAULT_HEART_COUNT = 20;
+const ATTRIBUTE_STARTING_POINTS = 9;
+const ATTRIBUTE_MAX_POINTS_KEY = "attributeMaxPoints";
+const GENERAL_ABILITY_STARTING_POINTS = 18;
+const GENERAL_ABILITY_MAX_POINTS_KEY = "generalAbilityMaxPoints";
+const EXTRA_SKILL_STARTING_POINTS = 6;
+const EXTRA_SKILL_MAX_POINTS_KEY = "extraSkillMaxPoints";
 let currentSheetId = "";
 let sheetDirectory = [];
 
@@ -42,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initSheetManager();
   setupV5Layout();
   setupCharacterInfoTabs();
+  setupFloatingTooltips();
+  setupSheetRollModal();
   setupSpecialDiceBuilder();
 
   // 1) Load saved sheet state FIRST (so attrs/skills are ready)
@@ -142,9 +152,17 @@ function setupV5Layout() {
   const characterInfoCard = document.querySelector(".character-info-card");
   const itemsPanel = document.querySelector(".items-panel");
   const extraSkillPanel = document.querySelector(".extra-skill-panel");
+  const attributesCard = document.querySelector(".attributes-card");
 
-  if (sheetPanel && characterInfoCard && itemsPanel && extraSkillPanel) {
-    characterInfoCard.after(itemsPanel, extraSkillPanel);
+  if (sheetPanel && characterInfoCard && itemsPanel && attributesCard) {
+    let lowerLayout = document.querySelector(".lower-sheet-layout");
+    if (!lowerLayout) {
+      lowerLayout = document.createElement("div");
+      lowerLayout.className = "lower-sheet-layout";
+    }
+    characterInfoCard.after(lowerLayout);
+    lowerLayout.append(itemsPanel, attributesCard);
+    setupProgressionTabs(attributesCard, extraSkillPanel);
   }
 
   const rollResultModal = document.getElementById("result-modal");
@@ -185,6 +203,478 @@ function setupV5Layout() {
   });
 }
 
+function setupProgressionTabs(card, extraSkillPanel) {
+  if (!card || card.dataset.progressionTabsReady === "true") return;
+
+  const attrTitle = Array.from(card.querySelectorAll(".sheet-section-title"))
+    .find((heading) => heading.textContent.trim() === "Attributes");
+  const attrSubtitle = attrTitle?.nextElementSibling?.classList.contains("sheet-subtitle")
+    ? attrTitle.nextElementSibling
+    : null;
+  const statSection = card.querySelector(".stat-section");
+  const gaTitle = Array.from(card.querySelectorAll(".sheet-section-title"))
+    .find((heading) => heading.textContent.trim() === "General Ability");
+  const gaColumns = card.querySelector(".ga-columns");
+
+  if (!attrTitle || !statSection || !gaTitle || !gaColumns) return;
+
+  card.dataset.progressionTabsReady = "true";
+  card.classList.add("progression-card");
+
+  const tabs = document.createElement("div");
+  tabs.className = "progression-tabs";
+  tabs.setAttribute("role", "tablist");
+  tabs.setAttribute("aria-label", "Character stats sections");
+  tabs.innerHTML = `
+    <button type="button" class="progression-tab is-active" role="tab" aria-selected="true" data-progression-tab="attributes">Attribute</button>
+    <button type="button" class="progression-tab" role="tab" aria-selected="false" data-progression-tab="general-ability">General Ability</button>
+    <button type="button" class="progression-tab" role="tab" aria-selected="false" data-progression-tab="extra-skill">Extra Skill</button>
+  `;
+
+  const attrPanel = document.createElement("div");
+  attrPanel.className = "progression-panel is-active";
+  attrPanel.dataset.progressionPanel = "attributes";
+  attrTitle.remove();
+  const attrHeader = document.createElement("div");
+  attrHeader.className = "attribute-tab-header";
+  if (attrSubtitle) attrHeader.append(attrSubtitle);
+  attrHeader.insertAdjacentHTML("beforeend", `
+    <div class="attribute-points-box" id="attribute-points-box" title="Double click to edit maximum points">
+      <span>Remaining</span>
+      <strong id="attribute-remaining-points">${ATTRIBUTE_STARTING_POINTS}</strong>
+      <span class="attribute-points-divider">/</span>
+      <span>Max</span>
+      <strong id="attribute-max-points">${ATTRIBUTE_STARTING_POINTS}</strong>
+    </div>
+  `);
+  setupAttributePointsBox(attrHeader.querySelector("#attribute-points-box"));
+  attrPanel.append(attrHeader);
+  attrPanel.append(statSection);
+  ensureToughnessAttribute(statSection);
+  groupAttributeRows(statSection);
+
+  const gaPanel = document.createElement("div");
+  gaPanel.className = "progression-panel hidden";
+  gaPanel.dataset.progressionPanel = "general-ability";
+  gaTitle.remove();
+  const gaHeader = document.createElement("div");
+  gaHeader.className = "attribute-tab-header";
+  gaHeader.innerHTML = `
+    <p class="sheet-subtitle">Click dots to set 1-6 points. Tick checkbox to have +1 Succeed.</p>
+    <div class="attribute-points-box" id="general-ability-points-box" title="Double click to edit maximum points">
+      <span>Remaining</span>
+      <strong id="general-ability-remaining-points">${GENERAL_ABILITY_STARTING_POINTS}</strong>
+      <span class="attribute-points-divider">/</span>
+      <span>Max</span>
+      <strong id="general-ability-max-points">${GENERAL_ABILITY_STARTING_POINTS}</strong>
+    </div>
+  `;
+  setupGeneralAbilityPointsBox(gaHeader.querySelector("#general-ability-points-box"));
+  gaPanel.append(gaHeader, gaColumns);
+
+  const extraPanel = document.createElement("div");
+  extraPanel.className = "progression-panel hidden";
+  extraPanel.dataset.progressionPanel = "extra-skill";
+  if (extraSkillPanel) {
+    extraSkillPanel.classList.add("progression-extra-skill-panel");
+    extraPanel.append(extraSkillPanel);
+  }
+
+  card.prepend(tabs);
+  card.append(attrPanel, gaPanel, extraPanel);
+
+  const tabButtons = tabs.querySelectorAll(".progression-tab");
+  const panels = card.querySelectorAll(".progression-panel");
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.progressionTab;
+      tabButtons.forEach((tab) => {
+        const active = tab === button;
+        tab.classList.toggle("is-active", active);
+        tab.setAttribute("aria-selected", active.toString());
+      });
+      panels.forEach((panel) => {
+        const active = panel.dataset.progressionPanel === target;
+        panel.classList.toggle("is-active", active);
+        panel.classList.toggle("hidden", !active);
+      });
+    });
+  });
+}
+
+function ensureToughnessAttribute(statSection) {
+  if (!statSection || statSection.querySelector('[data-role="attr"][data-stat="tou"]')) return;
+
+  const dexRow = statSection.querySelector('[data-role="attr"][data-stat="dex"]');
+  if (!dexRow) return;
+
+  const touRow = document.createElement("div");
+  touRow.className = "stat-row";
+  touRow.dataset.role = "attr";
+  touRow.dataset.stat = "tou";
+  touRow.innerHTML = `
+    <span class="stat-label">Toughness (TOU)</span>
+    <div class="stat-dots">
+      <button type="button" class="stat-dot" data-index="1"></button>
+      <button type="button" class="stat-dot" data-index="2"></button>
+      <button type="button" class="stat-dot" data-index="3"></button>
+      <button type="button" class="stat-dot" data-index="4"></button>
+      <button type="button" class="stat-dot" data-index="5"></button>
+      <button type="button" class="stat-dot" data-index="6"></button>
+    </div>
+    <label class="stat-bonus">
+      <input type="checkbox" class="stat-succeed">
+      +1 Succeed
+    </label>
+    <button type="button" class="stat-roll-btn">Roll</button>
+  `;
+  dexRow.after(touRow);
+}
+
+function groupAttributeRows(statSection) {
+  if (!statSection || statSection.dataset.groupedAttributes === "true") return;
+
+  const groups = [
+    { title: "Physical", keys: ["str", "dex", "tou"] },
+    { title: "Intelligent and Emotion", keys: ["int", "apt", "san"] },
+    { title: "Personality", keys: ["cha", "rhe", "ego"] }
+  ];
+
+  const rows = new Map(
+    Array.from(statSection.querySelectorAll('.stat-row[data-role="attr"]'))
+      .map((row) => [row.dataset.stat, row])
+  );
+
+  statSection.classList.add("attribute-group-grid");
+  statSection.dataset.groupedAttributes = "true";
+  statSection.innerHTML = "";
+
+  groups.forEach((group) => {
+    const column = document.createElement("section");
+    column.className = "attribute-group";
+    column.innerHTML = `<h4 class="attribute-group-title">${group.title}</h4>`;
+    group.keys.forEach((key) => {
+      const row = rows.get(key);
+      if (row) column.append(row);
+    });
+    statSection.append(column);
+  });
+}
+
+function getSpentAttributePoints() {
+  return Array.from(document.querySelectorAll('.stat-row[data-role="attr"]'))
+    .reduce((total, row) => {
+      const key = row.dataset.stat;
+      const value = sheetState.attrs[key] ?? 1;
+      return total + Math.max(0, value - 1);
+    }, 0);
+}
+
+function getAttributeMaxPoints() {
+  const raw = sheetState.globals?.[ATTRIBUTE_MAX_POINTS_KEY];
+  const parsed = parseInt(raw ?? ATTRIBUTE_STARTING_POINTS, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : ATTRIBUTE_STARTING_POINTS;
+}
+
+function getRemainingAttributePoints() {
+  return Math.max(0, getAttributeMaxPoints() - getSpentAttributePoints());
+}
+
+function updateAttributeRemainingDisplay() {
+  const remainingOutput = document.getElementById("attribute-remaining-points");
+  const maxOutput = document.getElementById("attribute-max-points");
+  if (remainingOutput) remainingOutput.textContent = String(getRemainingAttributePoints());
+  if (maxOutput) maxOutput.textContent = String(getAttributeMaxPoints());
+}
+
+function setupAttributePointsBox(box) {
+  if (!box) return;
+  box.addEventListener("dblclick", () => {
+    const spent = getSpentAttributePoints();
+    const currentMax = getAttributeMaxPoints();
+    const next = prompt("Set maximum Attribute points:", String(currentMax));
+    if (next == null) return;
+
+    const parsed = parseInt(next, 10);
+    if (!Number.isFinite(parsed) || parsed < spent) {
+      alert(`Maximum Attribute points cannot be lower than points already spent (${spent}).`);
+      return;
+    }
+
+    sheetState.globals[ATTRIBUTE_MAX_POINTS_KEY] = String(parsed);
+    updateAttributeRemainingDisplay();
+    saveSheetStateToStorage();
+  });
+}
+
+function getSpentGeneralAbilityPoints() {
+  return Array.from(document.querySelectorAll('.ga-columns .stat-row[data-role="skill"]'))
+    .reduce((total, row) => {
+      const key = row.dataset.skill || row.dataset.stat;
+      const value = sheetState.skills[key] ?? 0;
+      return total + Math.max(0, value);
+    }, 0);
+}
+
+function getGeneralAbilityMaxPoints() {
+  const raw = sheetState.globals?.[GENERAL_ABILITY_MAX_POINTS_KEY];
+  const parsed = parseInt(raw ?? GENERAL_ABILITY_STARTING_POINTS, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : GENERAL_ABILITY_STARTING_POINTS;
+}
+
+function getRemainingGeneralAbilityPoints() {
+  return Math.max(0, getGeneralAbilityMaxPoints() - getSpentGeneralAbilityPoints());
+}
+
+function updateGeneralAbilityRemainingDisplay() {
+  const remainingOutput = document.getElementById("general-ability-remaining-points");
+  const maxOutput = document.getElementById("general-ability-max-points");
+  if (remainingOutput) remainingOutput.textContent = String(getRemainingGeneralAbilityPoints());
+  if (maxOutput) maxOutput.textContent = String(getGeneralAbilityMaxPoints());
+}
+
+function setupGeneralAbilityPointsBox(box) {
+  if (!box) return;
+  box.addEventListener("dblclick", () => {
+    const spent = getSpentGeneralAbilityPoints();
+    const currentMax = getGeneralAbilityMaxPoints();
+    const next = prompt("Set maximum General Ability points:", String(currentMax));
+    if (next == null) return;
+
+    const parsed = parseInt(next, 10);
+    if (!Number.isFinite(parsed) || parsed < spent) {
+      alert(`Maximum General Ability points cannot be lower than points already spent (${spent}).`);
+      return;
+    }
+
+    sheetState.globals[GENERAL_ABILITY_MAX_POINTS_KEY] = String(parsed);
+    updateGeneralAbilityRemainingDisplay();
+    saveSheetStateToStorage();
+  });
+}
+
+function setupSheetRollModal() {
+  const modal = ensureSheetRollModal();
+  const form = modal.querySelector("#sheet-roll-form");
+  const closeBtn = modal.querySelector("#close-sheet-roll-modal");
+  const cancelBtn = modal.querySelector("#cancel-sheet-roll-btn");
+  const backdrop = modal.querySelector("#sheet-roll-modal-backdrop");
+  const addSpecialBtn = modal.querySelector("#add-sheet-roll-special-die-btn");
+  const specialList = modal.querySelector("#sheet-roll-special-list");
+
+  if (modal.dataset.ready === "true") return;
+  modal.dataset.ready = "true";
+
+  function close() {
+    modal.classList.add("hidden");
+    pendingSheetRoll = null;
+    document.body.style.overflow = "";
+  }
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!pendingSheetRoll) return;
+
+    const total = modal.querySelector("#sheet-roll-total")?.value || pendingSheetRoll.total;
+    const success = modal.querySelector("#sheet-roll-success")?.value || pendingSheetRoll.success;
+    const penalty = modal.querySelector("#sheet-roll-penalty")?.value || pendingSheetRoll.penalty;
+    const specialStr = modal.querySelector("#sheet-roll-special")?.value ?? pendingSheetRoll.specialStr ?? "";
+
+    performRoll({
+      total,
+      specialStr,
+      success,
+      penalty,
+      equipmentDmg: pendingSheetRoll.equipmentDmg ?? null
+    });
+    close();
+  });
+
+  closeBtn?.addEventListener("click", close);
+  cancelBtn?.addEventListener("click", close);
+  backdrop?.addEventListener("click", close);
+  addSpecialBtn?.addEventListener("click", () => {
+    sheetRollSpecialDiceState.push(["1", "", "", "", "", "R"]);
+    renderSheetRollSpecialDice(modal);
+  });
+  specialList?.addEventListener("click", (event) => {
+    const removeBtn = event.target.closest("[data-sheet-special-remove]");
+    if (removeBtn) {
+      const index = parseInt(removeBtn.dataset.sheetSpecialRemove || "-1", 10);
+      if (index >= 0 && index < sheetRollSpecialDiceState.length) {
+        if (!confirmRemove("Remove this special die?")) return;
+        sheetRollSpecialDiceState.splice(index, 1);
+        renderSheetRollSpecialDice(modal);
+      }
+      return;
+    }
+
+    const faceBtn = event.target.closest("[data-sheet-special-die]");
+    if (!faceBtn || faceBtn.disabled) return;
+
+    const dieIndex = parseInt(faceBtn.dataset.sheetSpecialDie || "-1", 10);
+    const faceIndex = parseInt(faceBtn.dataset.faceIndex || "-1", 10);
+    if (dieIndex < 0 || dieIndex >= sheetRollSpecialDiceState.length) return;
+    if (faceIndex < 1 || faceIndex > 4) return;
+
+    const current = sheetRollSpecialDiceState[dieIndex][faceIndex] || "";
+    sheetRollSpecialDiceState[dieIndex][faceIndex] = current === "" ? "+" : current === "+" ? "-" : "";
+    renderSheetRollSpecialDice(modal);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) close();
+  });
+}
+
+function ensureSheetRollModal() {
+  let modal = document.getElementById("sheet-roll-modal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "sheet-roll-modal";
+  modal.className = "result-modal hidden";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "sheet-roll-modal-title");
+  modal.innerHTML = `
+    <div class="result-modal-backdrop" id="sheet-roll-modal-backdrop"></div>
+    <div class="result-modal-panel equipment-modal-panel sheet-roll-modal-panel">
+      <div class="result-modal-header">
+        <h2 id="sheet-roll-modal-title">Prepare Roll</h2>
+        <button type="button" id="close-sheet-roll-modal" class="result-modal-close" aria-label="Close roll form">×</button>
+      </div>
+      <div class="result-modal-body">
+        <form id="sheet-roll-form" class="equipment-form">
+          <div class="sheet-roll-context">
+            <strong id="sheet-roll-name">Roll</strong>
+            <span id="sheet-roll-detail"></span>
+          </div>
+          <div class="sheet-roll-number-row">
+            <label class="equipment-field" for="sheet-roll-total">
+              <span>Total dice :</span>
+              <input type="number" id="sheet-roll-total" min="1" value="1">
+            </label>
+            <label class="equipment-field" for="sheet-roll-success">
+              <span>Succeed :</span>
+              <input type="number" id="sheet-roll-success" min="0" value="0">
+            </label>
+            <label class="equipment-field" for="sheet-roll-penalty">
+              <span>Penalty :</span>
+              <input type="number" id="sheet-roll-penalty" min="0" value="0">
+            </label>
+          </div>
+          <div class="sheet-roll-special-builder">
+            <div class="special-dice-builder-header">
+              <span>Special dice :</span>
+              <span id="sheet-roll-special-preview" class="special-preview">None</span>
+            </div>
+            <input type="hidden" id="sheet-roll-special">
+            <div id="sheet-roll-special-list" class="special-dice-list sheet-roll-special-list">
+              <p class="special-dice-empty">No special dice.</p>
+            </div>
+            <button type="button" id="add-sheet-roll-special-die-btn" class="add-special-die-btn">
+              + Add Special Die
+            </button>
+          </div>
+          <p class="sheet-roll-note">Adjust Succeed here if you spend Will Power before rolling.</p>
+          <div class="equipment-form-actions">
+            <button type="submit" id="confirm-sheet-roll-btn">Roll</button>
+            <button type="button" id="cancel-sheet-roll-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.append(modal);
+  return modal;
+}
+
+function openSheetRollModal(payload) {
+  const modal = ensureSheetRollModal();
+  pendingSheetRoll = {
+    label: payload.label || "Roll",
+    detail: payload.detail || "",
+    total: payload.total || 1,
+    success: payload.success || 0,
+    penalty: payload.penalty || 0,
+    specialStr: payload.specialStr || "",
+    equipmentDmg: payload.equipmentDmg ?? null
+  };
+
+  modal.querySelector("#sheet-roll-name").textContent = pendingSheetRoll.label;
+  modal.querySelector("#sheet-roll-detail").textContent = pendingSheetRoll.detail;
+  modal.querySelector("#sheet-roll-total").value = pendingSheetRoll.total;
+  modal.querySelector("#sheet-roll-success").value = pendingSheetRoll.success;
+  modal.querySelector("#sheet-roll-penalty").value = pendingSheetRoll.penalty;
+  sheetRollSpecialDiceState = getCustomSpecialDiceState(pendingSheetRoll.specialStr);
+  renderSheetRollSpecialDice(modal);
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function getCustomSpecialDiceState(specialStr = "") {
+  const trimmed = String(specialStr || "").trim();
+  if (!trimmed || !trimmed.startsWith("[")) return [];
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry) => entry?.kind === "custom" && Array.isArray(entry.faces))
+      .map((entry) => buildDieFaces(entry));
+  } catch (error) {
+    return [];
+  }
+}
+
+function serializeCustomSpecialDice(state = []) {
+  const payload = state.map((faces) => ({
+    kind: "custom",
+    faces: buildDieFaces({ kind: "custom", faces })
+  }));
+  return payload.length ? JSON.stringify(payload) : "";
+}
+
+function renderSheetRollSpecialDice(modal) {
+  const input = modal.querySelector("#sheet-roll-special");
+  const list = modal.querySelector("#sheet-roll-special-list");
+  const preview = modal.querySelector("#sheet-roll-special-preview");
+  if (!input || !list) return;
+
+  input.value = serializeCustomSpecialDice(sheetRollSpecialDiceState);
+  if (preview) {
+    preview.textContent = sheetRollSpecialDiceState.length
+      ? `${sheetRollSpecialDiceState.length} custom ${sheetRollSpecialDiceState.length === 1 ? "die" : "dice"}`
+      : "None";
+  }
+
+  if (!sheetRollSpecialDiceState.length) {
+    list.innerHTML = '<p class="special-dice-empty">No special dice.</p>';
+    return;
+  }
+
+  list.innerHTML = sheetRollSpecialDiceState
+    .map((faces, dieIndex) => `
+      <div class="special-die-card sheet-roll-special-die-card">
+        <div class="special-die-card-faces" aria-label="Special die ${dieIndex + 1} faces">
+          ${faces.map((face, faceIndex) => `
+            <button
+              type="button"
+              class="special-die-editor-face ${getSpecialFaceClass(face)}"
+              data-sheet-special-die="${dieIndex}"
+              data-face-index="${faceIndex}"
+              ${faceIndex === 0 || faceIndex === 5 ? "disabled" : ""}
+            >
+              ${getSpecialFaceDisplay(face, faceIndex)}
+            </button>
+          `).join("")}
+        </div>
+        <button type="button" class="icon-action-btn equipment-remove-btn" data-sheet-special-remove="${dieIndex}" aria-label="Remove special die ${dieIndex + 1}">⌫</button>
+      </div>
+    `)
+    .join("");
+}
+
 function setupCharacterInfoTabs() {
   const tabs = document.querySelectorAll(".character-info-tab[data-character-tab]");
   const panels = document.querySelectorAll(".character-info-panel[data-character-panel]");
@@ -207,6 +697,79 @@ function setupCharacterInfoTabs() {
       });
     });
   });
+}
+
+function setupFloatingTooltips() {
+  let tooltip = document.getElementById("floating-tooltip");
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "floating-tooltip";
+    tooltip.className = "floating-tooltip hidden";
+    document.body.append(tooltip);
+  }
+
+  let activeTarget = null;
+
+  function positionTooltip(target) {
+    if (!target || !tooltip) return;
+
+    const rect = target.getBoundingClientRect();
+    const margin = 12;
+    tooltip.classList.remove("hidden");
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+    let top = rect.bottom + 8;
+
+    if (top + tooltipRect.height + margin > window.innerHeight) {
+      top = rect.top - tooltipRect.height - 8;
+    }
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function showTooltip(target) {
+    const text = target?.dataset?.tooltip || "";
+    if (!text || !tooltip) return;
+
+    activeTarget = target;
+    tooltip.textContent = text;
+    positionTooltip(target);
+  }
+
+  function hideTooltip(target) {
+    if (target && activeTarget !== target) return;
+    activeTarget = null;
+    if (tooltip) tooltip.classList.add("hidden");
+  }
+
+  document.addEventListener("mouseover", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (target) showTooltip(target);
+  });
+
+  document.addEventListener("mouseout", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (!target || target.contains(event.relatedTarget)) return;
+    hideTooltip(target);
+  });
+
+  document.addEventListener("focusin", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (target) showTooltip(target);
+  });
+
+  document.addEventListener("focusout", (event) => {
+    const target = event.target.closest("[data-tooltip]");
+    if (target) hideTooltip(target);
+  });
+
+  window.addEventListener("scroll", () => positionTooltip(activeTarget), true);
+  window.addEventListener("resize", () => positionTooltip(activeTarget));
 }
 
 function setupSpecialDiceBuilder() {
@@ -309,6 +872,7 @@ function setupSpecialDiceBuilder() {
     if (actionBtn.dataset.specialDieAction === "edit") {
       openSpecialDieModal(index);
     } else if (actionBtn.dataset.specialDieAction === "remove") {
+      if (!confirmRemove("Remove this special die?")) return;
       specialDiceBuilderState.splice(index, 1);
       renderSpecialDiceList();
     }
@@ -429,7 +993,10 @@ function createDefaultSheetPayload(name = "") {
       race: "",
       willSource: "",
       background: "",
-      image: ""
+      image: "",
+      [ATTRIBUTE_MAX_POINTS_KEY]: String(ATTRIBUTE_STARTING_POINTS),
+      [GENERAL_ABILITY_MAX_POINTS_KEY]: String(GENERAL_ABILITY_STARTING_POINTS),
+      [EXTRA_SKILL_MAX_POINTS_KEY]: String(EXTRA_SKILL_STARTING_POINTS)
     },
     equipment: [],
     statuses: [],
@@ -805,10 +1372,12 @@ function setupEquipment() {
   const openBtn = document.getElementById("open-equipment-modal");
   const closeBtn = document.getElementById("close-equipment-modal");
   const cancelBtn = document.getElementById("cancel-equipment-btn");
+  const deleteBtn = document.getElementById("delete-equipment-btn");
   const backdrop = document.getElementById("equipment-modal-backdrop");
   const form = document.getElementById("equipment-form");
   const list = document.getElementById("equipment-list");
   const equipmentBlock = document.querySelector(".equipment-block");
+  const basicGearTags = document.getElementById("basic-gear-tags");
   const openDependencyBtn = document.getElementById("open-equipment-dependency-modal");
   const closeDependencyBtn = document.getElementById("close-equipment-dependency-modal");
   const cancelDependencyBtn = document.getElementById("cancel-equipment-dependency-btn");
@@ -828,6 +1397,10 @@ function setupEquipment() {
 
   if (cancelBtn) {
     cancelBtn.addEventListener("click", closeEquipmentModal);
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", onEquipmentModalDelete);
   }
 
   if (backdrop) {
@@ -914,6 +1487,26 @@ function setupEquipment() {
     });
   }
 
+  if (basicGearTags) {
+    basicGearTags.addEventListener("click", (event) => {
+      const rollBtn = event.target.closest("button[data-basic-equipment-roll-id]");
+      if (!rollBtn) return;
+      event.stopPropagation();
+
+      const item = sheetState.equipment.find((entry) => entry.id === rollBtn.dataset.basicEquipmentRollId);
+      if (item) rollEquipment(item);
+    });
+
+    basicGearTags.addEventListener("dblclick", (event) => {
+      if (event.target.closest("button[data-basic-equipment-roll-id]")) return;
+      const tag = event.target.closest("[data-basic-equipment-id]");
+      if (!tag) return;
+
+      const item = sheetState.equipment.find((entry) => entry.id === tag.dataset.basicEquipmentId);
+      if (item) openEquipmentModal(item);
+    });
+  }
+
   renderEquipmentList();
 
   document.addEventListener("keydown", (event) => {
@@ -933,6 +1526,7 @@ function openEquipmentModal(item = null, slot = "wearing") {
   const modal = document.getElementById("equipment-modal");
   const title = document.getElementById("equipment-modal-title");
   const saveBtn = document.getElementById("save-equipment-btn");
+  const deleteBtn = document.getElementById("delete-equipment-btn");
   const form = document.getElementById("equipment-form");
 
   if (!modal || !form) return;
@@ -949,6 +1543,10 @@ function openEquipmentModal(item = null, slot = "wearing") {
     saveBtn.textContent = item ? "Save" : "Add";
   }
 
+  if (deleteBtn) {
+    deleteBtn.classList.toggle("hidden", !item);
+  }
+
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -959,6 +1557,7 @@ function closeEquipmentModal() {
   const form = document.getElementById("equipment-form");
   const title = document.getElementById("equipment-modal-title");
   const saveBtn = document.getElementById("save-equipment-btn");
+  const deleteBtn = document.getElementById("delete-equipment-btn");
 
   if (modal) {
     modal.classList.add("hidden");
@@ -979,6 +1578,10 @@ function closeEquipmentModal() {
 
   if (saveBtn) {
     saveBtn.textContent = "Add";
+  }
+
+  if (deleteBtn) {
+    deleteBtn.classList.add("hidden");
   }
 
   if (dependencyModal) {
@@ -1082,6 +1685,13 @@ function onEquipmentSubmit(event) {
     dependencies: [...equipmentDependencySelection]
   };
 
+  if (payload.slot === "left-hand" || payload.slot === "right-hand") {
+    sheetState.equipment = sheetState.equipment.filter((item) => {
+      const normalized = normalizeEquipmentItem(item);
+      return normalized.slot !== payload.slot || item.id === payload.id;
+    });
+  }
+
   const existingIndex = sheetState.equipment.findIndex((item) => item.id === payload.id);
   if (existingIndex >= 0) {
     sheetState.equipment[existingIndex] = payload;
@@ -1095,9 +1705,21 @@ function onEquipmentSubmit(event) {
 }
 
 function removeEquipment(id) {
+  if (!confirmRemove("Remove this equipment?")) return false;
   sheetState.equipment = sheetState.equipment.filter((item) => item.id !== id);
   renderEquipmentList();
   saveSheetStateToStorage();
+  return true;
+}
+
+function onEquipmentModalDelete() {
+  const idInput = document.getElementById("equipment-id");
+  const id = idInput?.value || "";
+  if (!id) return;
+
+  if (removeEquipment(id)) {
+    closeEquipmentModal();
+  }
 }
 
 function collectStatOptions() {
@@ -1295,7 +1917,9 @@ function rollEquipment(item) {
   let globalSuccess = parseInt(successInput?.value || "0", 10);
   if (Number.isNaN(globalSuccess) || globalSuccess < 0) globalSuccess = 0;
 
-  performRoll({
+  openSheetRollModal({
+    label: item.name || "Equipment Roll",
+    detail: "Equipment",
     total: totalDice,
     specialStr: specialInput?.value || "",
     success: globalSuccess + getEquipmentRollSuccessBonus(item),
@@ -1339,13 +1963,13 @@ function renderEquipmentList() {
 
   if (leftHandList) {
     leftHandList.innerHTML = leftHand.length
-      ? leftHand.map(renderEquipmentCard).join("")
+      ? renderEquipmentCard(leftHand[0])
       : '<p class="equipment-empty">Empty hand.</p>';
   }
 
   if (rightHandList) {
     rightHandList.innerHTML = rightHand.length
-      ? rightHand.map(renderEquipmentCard).join("")
+      ? renderEquipmentCard(rightHand[0])
       : '<p class="equipment-empty">Empty hand.</p>';
   }
 
@@ -1358,6 +1982,7 @@ function renderEquipmentList() {
 }
 
 function renderEquipmentCard(item) {
+  const canRoll = isEquipmentRollable(item);
   return `
       <div class="equipment-item">
         <div class="equipment-item-info">
@@ -1376,12 +2001,16 @@ function renderEquipmentCard(item) {
           </div>
         </div>
         <div class="equipment-item-actions">
-          <button type="button" class="equipment-roll-btn" data-action="roll" data-id="${item.id}">Roll</button>
+          ${canRoll ? `<button type="button" class="equipment-roll-btn" data-action="roll" data-id="${item.id}">Roll</button>` : ""}
           <button type="button" class="icon-action-btn" data-action="edit" data-id="${item.id}" aria-label="Edit ${escapeHtml(item.name || "equipment")}">✎</button>
           <button type="button" class="icon-action-btn equipment-remove-btn" data-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "equipment")}">⌫</button>
         </div>
       </div>
     `;
+}
+
+function isEquipmentRollable(item) {
+  return Array.isArray(item?.dependencies) && item.dependencies.length > 0;
 }
 
 function renderEquipmentStatPreview(item) {
@@ -1489,35 +2118,52 @@ function renderBasicGearTags() {
   const container = document.getElementById("basic-gear-tags");
   if (!container) return;
 
-  const wornGear = Array.isArray(sheetState.equipment)
-    ? sheetState.equipment.map(normalizeEquipmentItem).filter((item) => item.slot === "wearing")
+  const shownGear = Array.isArray(sheetState.equipment)
+    ? sheetState.equipment.map(normalizeEquipmentItem)
     : [];
 
-  if (!wornGear.length) {
-    container.innerHTML = '<span class="basic-status-empty">No worn gear.</span>';
+  if (!shownGear.length) {
+    container.innerHTML = '<span class="basic-status-empty">No gear.</span>';
     return;
   }
 
-  container.innerHTML = wornGear.map((item) => {
+  container.innerHTML = shownGear.map((item) => {
     const stats = [
       item.stats?.dmg ? `DMG ${item.dmg || "-"}` : "",
       item.stats?.charge ? `Charge ${item.charge || 0}` : "",
       item.stats?.def ? `DEF ${item.def || 0}` : "",
       item.stats?.toughness ? `Tough ${item.toughness || 0}` : ""
     ].filter(Boolean).join(" | ");
-    const tooltip = [item.name || "Equipment", stats, item.description || ""].filter(Boolean).join("\n");
+    const slotLabel = getEquipmentSlotLabel(item.slot);
+    const tooltip = [item.name || "Equipment", slotLabel, stats, item.description || ""].filter(Boolean).join("\n");
+    const rollButton = isEquipmentRollable(item)
+      ? `<button type="button" class="basic-gear-roll-btn" data-basic-equipment-roll-id="${escapeHtml(item.id || "")}" aria-label="Roll ${escapeHtml(item.name || "equipment")}">Roll</button>`
+      : "";
     return `
-      <button
-        type="button"
+      <span
         class="basic-gear-tag"
+        data-basic-equipment-id="${escapeHtml(item.id || "")}"
         data-tooltip="${escapeHtml(tooltip)}"
-        aria-label="${escapeHtml(item.name || "equipment")}"
+        role="button"
+        tabindex="0"
+        aria-label="${escapeHtml(`Double click to edit ${item.name || "equipment"}`)}"
       >
         <span>${escapeHtml(item.name || "Equipment")}</span>
-        ${item.stats?.def ? `<span class="basic-status-turns">DEF ${escapeHtml(item.def || 0)}</span>` : ""}
-      </button>
+        <span class="basic-status-turns">${escapeHtml(slotLabel)}</span>
+        ${item.slot === "wearing" && item.stats?.def ? `<span class="basic-status-turns">DEF ${escapeHtml(item.def || 0)}</span>` : ""}
+        ${rollButton}
+      </span>
     `;
   }).join("");
+}
+
+function getEquipmentSlotLabel(slot) {
+  const labels = {
+    "left-hand": "Left Hand",
+    "right-hand": "Right Hand",
+    wearing: "Wearing"
+  };
+  return labels[normalizeEquipmentSlot(slot)] || "Wearing";
 }
 
 function escapeHtml(value) {
@@ -1527,6 +2173,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function confirmRemove(message) {
+  return window.confirm(message || "Remove this?");
 }
 
 function setupStatuses() {
@@ -1786,9 +2436,11 @@ function onStatusSubmit(event) {
 }
 
 function removeStatus(id) {
+  if (!confirmRemove("Remove this status?")) return false;
   sheetState.statuses = sheetState.statuses.filter((item) => item.id !== id);
   saveSheetStateToStorage();
   renderStatusList();
+  return true;
 }
 
 function onStatusModalDelete() {
@@ -1796,8 +2448,9 @@ function onStatusModalDelete() {
   const id = idInput?.value || "";
   if (!id) return;
 
-  removeStatus(id);
-  closeStatusModal();
+  if (removeStatus(id)) {
+    closeStatusModal();
+  }
 }
 
 function updateStatusDuration(id, value) {
@@ -2157,9 +2810,11 @@ function updateItemAmount(id, value) {
 }
 
 function removeItem(id) {
+  if (!confirmRemove("Remove this item?")) return false;
   sheetState.items = sheetState.items.filter((item) => item.id !== id);
   saveSheetStateToStorage();
   renderItemList();
+  return true;
 }
 
 function renderItemList() {
@@ -2172,8 +2827,10 @@ function renderItemList() {
   }
 
   list.innerHTML = sheetState.items
-    .map((item) => `
-      <div class="item-card">
+    .map((item) => {
+      const tooltip = getItemTooltipText(item);
+      return `
+      <div class="item-card" data-tooltip="${escapeHtml(tooltip)}" tabindex="0">
         <div class="item-main">
           <div class="equipment-item-info">
             <span class="equipment-name">${escapeHtml(item.name || "")}</span>
@@ -2197,8 +2854,15 @@ function renderItemList() {
           </div>
         </div>
       </div>
-    `)
+    `;
+    })
     .join("");
+}
+
+function getItemTooltipText(item) {
+  const amount = item?.amount ?? 0;
+  const details = item?.details ? `\n${item.details}` : "\nNo details.";
+  return `${item?.name || "Item"}\nAmount: ${amount}${details}`;
 }
 
 function setupExtraSkills() {
@@ -2215,6 +2879,8 @@ function setupExtraSkills() {
   const dependencyBackdrop = document.getElementById("extra-skill-dependency-modal-backdrop");
 
   if (!list || !form) return;
+
+  setupExtraSkillPointsBox();
 
   if (openBtn) {
     openBtn.addEventListener("click", () => openExtraSkillModal());
@@ -2303,6 +2969,7 @@ function setupExtraSkills() {
   });
 
   renderExtraSkillList();
+  updateExtraSkillRemainingDisplay();
 }
 
 function openExtraSkillModal(item = null) {
@@ -2346,9 +3013,17 @@ function setupExtraSkillPointDots() {
   dots.forEach((dot, i) => {
     const idx = parseInt(dot.dataset.index || String(i + 1), 10);
     dot.addEventListener("click", () => {
-      extraSkillPointsSelection = extraSkillPointsSelection === idx ? idx - 1 : idx;
-      if (extraSkillPointsSelection < 0) extraSkillPointsSelection = 0;
-      if (extraSkillPointsSelection > 6) extraSkillPointsSelection = 6;
+      const idInput = document.getElementById("extra-skill-id");
+      const existingId = idInput?.value || "";
+      const maxSelectable = Math.min(6, getRemainingExtraSkillPoints(existingId));
+      let nextValue = extraSkillPointsSelection === idx ? idx - 1 : idx;
+      if (nextValue < 0) nextValue = 0;
+      if (nextValue > 6) nextValue = 6;
+      if (nextValue > maxSelectable) {
+        alert("Not enough remaining Extra Skill points.");
+        return;
+      }
+      extraSkillPointsSelection = nextValue;
       renderExtraSkillPointDots();
     });
   });
@@ -2361,6 +3036,56 @@ function renderExtraSkillPointDots() {
     const idx = parseInt(dot.dataset.index || "0", 10);
     if (idx <= extraSkillPointsSelection) dot.classList.add("active");
     else dot.classList.remove("active");
+  });
+}
+
+function getSpentExtraSkillPoints(excludeId = "") {
+  return Array.isArray(sheetState.extraSkills)
+    ? sheetState.extraSkills.reduce((total, item) => {
+        if (excludeId && item.id === excludeId) return total;
+        const points = parseInt(item.points || "0", 10);
+        return total + (Number.isNaN(points) || points < 0 ? 0 : points);
+      }, 0)
+    : 0;
+}
+
+function getRemainingExtraSkillPoints(excludeId = "") {
+  return Math.max(0, getExtraSkillMaxPoints() - getSpentExtraSkillPoints(excludeId));
+}
+
+function updateExtraSkillRemainingDisplay() {
+  const remainingOutput = document.getElementById("extra-skill-remaining-points");
+  const maxOutput = document.getElementById("extra-skill-max-points");
+  if (remainingOutput) remainingOutput.textContent = String(getRemainingExtraSkillPoints());
+  if (maxOutput) maxOutput.textContent = String(getExtraSkillMaxPoints());
+}
+
+function getExtraSkillMaxPoints() {
+  const raw = sheetState.globals?.[EXTRA_SKILL_MAX_POINTS_KEY];
+  const parsed = parseInt(raw ?? EXTRA_SKILL_STARTING_POINTS, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : EXTRA_SKILL_STARTING_POINTS;
+}
+
+function setupExtraSkillPointsBox() {
+  const box = document.getElementById("extra-skill-points-box");
+  if (!box || box.dataset.ready === "true") return;
+
+  box.dataset.ready = "true";
+  box.addEventListener("dblclick", () => {
+    const spent = getSpentExtraSkillPoints();
+    const currentMax = getExtraSkillMaxPoints();
+    const next = prompt("Set maximum Extra Skill points:", String(currentMax));
+    if (next == null) return;
+
+    const parsed = parseInt(next, 10);
+    if (!Number.isFinite(parsed) || parsed < spent) {
+      alert(`Maximum Extra Skill points cannot be lower than points already spent (${spent}).`);
+      return;
+    }
+
+    sheetState.globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(parsed);
+    updateExtraSkillRemainingDisplay();
+    saveSheetStateToStorage();
   });
 }
 
@@ -2494,6 +3219,11 @@ function onExtraSkillSubmit(event) {
   if (level > 6) level = 6;
 
   const existingId = idInput?.value || "";
+  if (extraSkillPointsSelection > getRemainingExtraSkillPoints(existingId)) {
+    alert("Not enough remaining Extra Skill points.");
+    return;
+  }
+
   const payload = {
     id: existingId || `extra-skill-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     name,
@@ -2513,6 +3243,7 @@ function onExtraSkillSubmit(event) {
 
   saveSheetStateToStorage();
   renderExtraSkillList();
+  updateExtraSkillRemainingDisplay();
   closeExtraSkillModal();
 }
 
@@ -2520,17 +3251,29 @@ function updateExtraSkillLevel(id, clickedLevel) {
   const item = sheetState.extraSkills.find((entry) => entry.id === id);
   if (!item) return;
 
-  item.points = item.points === clickedLevel ? clickedLevel - 1 : clickedLevel;
-  if (item.points < 0) item.points = 0;
-  if (item.points > 6) item.points = 6;
+  let nextPoints = item.points === clickedLevel ? clickedLevel - 1 : clickedLevel;
+  if (nextPoints < 0) nextPoints = 0;
+  if (nextPoints > 6) nextPoints = 6;
+  const currentPoints = item.points || 0;
+  const delta = nextPoints - currentPoints;
+  if (delta > getRemainingExtraSkillPoints()) {
+    alert("Not enough remaining Extra Skill points.");
+    return;
+  }
+
+  item.points = nextPoints;
   saveSheetStateToStorage();
   renderExtraSkillList();
+  updateExtraSkillRemainingDisplay();
 }
 
 function removeExtraSkill(id) {
+  if (!confirmRemove("Remove this extra skill?")) return false;
   sheetState.extraSkills = sheetState.extraSkills.filter((item) => item.id !== id);
   saveSheetStateToStorage();
   renderExtraSkillList();
+  updateExtraSkillRemainingDisplay();
+  return true;
 }
 
 function rollExtraSkill(item) {
@@ -2548,7 +3291,9 @@ function rollExtraSkill(item) {
   let globalSuccess = parseInt(successInput?.value || "0", 10);
   if (Number.isNaN(globalSuccess) || globalSuccess < 0) globalSuccess = 0;
 
-  performRoll({
+  openSheetRollModal({
+    label: item.name || "Extra Skill Roll",
+    detail: "Extra Skill",
     total: totalDice,
     specialStr: specialInput?.value || "",
     success: globalSuccess + getDependencySuccessBonus(item.dependencies) + (item.profession ? 1 : 0),
@@ -2562,12 +3307,15 @@ function renderExtraSkillList() {
 
   if (!Array.isArray(sheetState.extraSkills) || sheetState.extraSkills.length === 0) {
     list.innerHTML = '<p class="equipment-empty">No extra skills yet.</p>';
+    updateExtraSkillRemainingDisplay();
     return;
   }
 
   list.innerHTML = sheetState.extraSkills
-    .map((item) => `
-      <div class="extra-skill-card">
+    .map((item) => {
+      const tooltip = getExtraSkillTooltipText(item);
+      return `
+      <div class="extra-skill-card" data-tooltip="${escapeHtml(tooltip)}" tabindex="0">
         <div class="equipment-item-info">
           <span class="equipment-name">${escapeHtml(item.name || "")}</span>
           <div class="extra-skill-meta-row">
@@ -2596,8 +3344,21 @@ function renderExtraSkillList() {
           <button type="button" class="icon-action-btn equipment-remove-btn" data-extra-skill-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "extra skill")}">⌫</button>
         </div>
       </div>
-    `)
+    `;
+    })
     .join("");
+  updateExtraSkillRemainingDisplay();
+}
+
+function getExtraSkillTooltipText(item) {
+  const dependencies = Array.isArray(item?.dependencies) && item.dependencies.length
+    ? item.dependencies
+        .map((id) => statOptions.find((option) => option.id === id)?.label)
+        .filter(Boolean)
+        .join(", ")
+    : "No related stat(s)";
+  const details = item?.details ? `\n${item.details}` : "\nNo details.";
+  return `${item?.name || "Extra Skill"}\nLV. ${item?.level ?? 0} / Points: ${item?.points || 0}\n${dependencies}${details}`;
 }
 
 // ---------- helpers from your Foundry logic ----------
@@ -2923,7 +3684,7 @@ function renderHistory() {
         </div>
         <div class="history-row">
           <span>Tokens: +${entry.plusTokens} / -${entry.minusTokens}</span>
-          <span>Succ/Pen: +${entry.success} / -${entry.penalty}</span>
+          <span>Succeed/Pen: +${entry.success} / -${entry.penalty}</span>
         </div>
       </div>
     `;
@@ -3146,6 +3907,8 @@ function setupStats() {
       setupAttrRow(row);
     }
   });
+  updateAttributeRemainingDisplay();
+  updateGeneralAbilityRemainingDisplay();
 }
 
 // --- helpers for attributes and skills ---
@@ -3195,7 +3958,9 @@ function setupAttrRow(row) {
     const specialInput = document.getElementById("special");
     const specialStr = specialInput ? specialInput.value || "" : "";
 
-    performRoll({
+    openSheetRollModal({
+      label: row.querySelector(".stat-label")?.textContent?.trim() || "Attribute Roll",
+      detail: "Attribute",
       total: value,
       specialStr,
       success: globalSucc + statBonus,
@@ -3210,6 +3975,7 @@ function setupSkillRow(row) {
 
   sheetState.skills[skillKey] = sheetState.skills[skillKey] ?? 0;
   initDotsForRow(row, sheetState.skills, skillKey);
+  updateGeneralAbilityRemainingDisplay();
 
   const rollBtn = row.querySelector(".stat-roll-btn");
   if (!rollBtn) return;
@@ -3265,7 +4031,14 @@ function setupSkillRow(row) {
     const specialInput = document.getElementById("special");
     const specialStr = specialInput ? specialInput.value || "" : "";
 
-    performRoll({
+    const skillName = row.querySelector(".stat-name")?.textContent?.trim()
+      || row.querySelector(".stat-label")?.textContent?.trim()
+      || "Skill Roll";
+    const attrLabel = chosenAttrKey ? chosenAttrKey.toUpperCase() : "";
+
+    openSheetRollModal({
+      label: skillName,
+      detail: attrLabel ? `Skill + ${attrLabel}` : "Skill",
       total: totalDice,
       specialStr,
       success: globalSucc + statBonus,
@@ -3278,6 +4051,7 @@ function setupSkillRow(row) {
 function initDotsForRow(row, store, key) {
   const dots = row.querySelectorAll(".stat-dot");
   const isAttributeRow = (row.dataset.role || "attr") === "attr";
+  const isGeneralAbilityRow = (row.dataset.role || "attr") === "skill" && !!row.closest(".ga-columns");
   const minValue = isAttributeRow ? 1 : 0;
   if (store[key] == null || store[key] < minValue) {
     store[key] = minValue;
@@ -3302,13 +4076,33 @@ function initDotsForRow(row, store, key) {
         nextVal = minValue;
       }
       if (nextVal > 6) nextVal = 6;
+      if (isAttributeRow) {
+        const currentValue = store[key] || minValue;
+        const delta = Math.max(0, nextVal - 1) - Math.max(0, currentValue - 1);
+        if (delta > getRemainingAttributePoints()) {
+          alert("Not enough remaining Attribute points.");
+          return;
+        }
+      }
+      if (isGeneralAbilityRow) {
+        const currentValue = store[key] || minValue;
+        const delta = Math.max(0, nextVal) - Math.max(0, currentValue);
+        if (delta > getRemainingGeneralAbilityPoints()) {
+          alert("Not enough remaining General Ability points.");
+          return;
+        }
+      }
       store[key] = nextVal;
       updateStatDots(row, nextVal);
+      if (isAttributeRow) updateAttributeRemainingDisplay();
+      if (isGeneralAbilityRow) updateGeneralAbilityRemainingDisplay();
       saveSheetStateToStorage();
     });
   });
 
   updateStatDots(row, store[key]);
+  if (isAttributeRow) updateAttributeRemainingDisplay();
+  if (isGeneralAbilityRow) updateGeneralAbilityRemainingDisplay();
 }
 
 function updateStatDots(row, value) {
@@ -3360,6 +4154,9 @@ function saveSheetStateToStorage() {
       }
     });
     globals.image = sheetState.globals?.image || "";
+    globals[ATTRIBUTE_MAX_POINTS_KEY] = String(getAttributeMaxPoints());
+    globals[GENERAL_ABILITY_MAX_POINTS_KEY] = String(getGeneralAbilityMaxPoints());
+    globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(getExtraSkillMaxPoints());
 
     sheetState.globals = globals;
     updateCurrentSheetName(globals.name || "");
@@ -3637,6 +4434,7 @@ function setupCharacterImagePersistence() {
 
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
+      if (!confirmRemove("Remove this character image?")) return;
       sheetState.globals.image = "";
       applyCharacterImageFromState();
       saveSheetStateToStorage();
