@@ -28,7 +28,7 @@ const DEFAULT_HEART_COUNT = 12;
 const MAX_HEART_COUNT = 18;
 const MENTAL_MAX_KEY = "mentalMax";
 const BASE_HEALTH = 10;
-const HEALTH_PER_TOUGHNESS = 2;
+const HEALTH_MAX_OVERRIDE_KEY = "healthMaxOverride";
 const BASE_WILL_POWER = 8;
 const ATTRIBUTE_STARTING_POINTS = 0;
 const ATTRIBUTE_DEFAULT_MAX_POINTS = 9;
@@ -151,6 +151,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 13) Note block and modal
   setupNotes();
+
+  // 13.5) Editable max HP field
+  setupHealthMaxField();
 
   // 14) Extra skill block and modal
   setupExtraSkills();
@@ -1238,6 +1241,7 @@ function createDefaultSheetPayload(name = "") {
       background: "",
       image: "",
       [MENTAL_MAX_KEY]: String(DEFAULT_HEART_COUNT),
+      [HEALTH_MAX_OVERRIDE_KEY]: "",
       [ATTRIBUTE_MAX_POINTS_KEY]: String(ATTRIBUTE_DEFAULT_MAX_POINTS),
       [GENERAL_ABILITY_MAX_POINTS_KEY]: String(GENERAL_ABILITY_STARTING_POINTS),
       [EXTRA_SKILL_MAX_POINTS_KEY]: String(EXTRA_SKILL_STARTING_POINTS)
@@ -2357,12 +2361,12 @@ function updateDerivedDefenseFromGear() {
 function updateDerivedCharacterVitals() {
   const healthInput = document.getElementById("char-health");
   const healthMaxInput = document.getElementById("char-health-max");
-  const willInput = document.getElementById("char-willpower");
 
-  const toughness = Math.max(0, parseInt(sheetState.attrs?.tou ?? "0", 10) || 0);
-  const sanity = Math.max(0, parseInt(sheetState.attrs?.san ?? "0", 10) || 0);
-  const nextHealthMax = BASE_HEALTH + (toughness * HEALTH_PER_TOUGHNESS);
-  const nextWill = BASE_WILL_POWER + sanity;
+  const defaultHealthMax = BASE_HEALTH;
+  const overrideHealthMax = parseInt(sheetState.globals?.[HEALTH_MAX_OVERRIDE_KEY] ?? "", 10);
+  const nextHealthMax = Number.isFinite(overrideHealthMax) && overrideHealthMax >= 0
+    ? overrideHealthMax
+    : defaultHealthMax;
 
   if (healthInput && healthMaxInput) {
     const previousMax = parseInt(healthMaxInput.value || String(nextHealthMax), 10);
@@ -2381,11 +2385,38 @@ function updateDerivedCharacterVitals() {
       sheetState.globals.healthMax = String(nextHealthMax);
     }
   }
+}
 
-  if (willInput) {
-    willInput.value = String(nextWill);
-    if (sheetState.globals) sheetState.globals.will = String(nextWill);
-  }
+function setupHealthMaxField() {
+  const healthMaxInput = document.getElementById("char-health-max");
+  if (!healthMaxInput || healthMaxInput.dataset.ready === "true") return;
+
+  healthMaxInput.dataset.ready = "true";
+  healthMaxInput.addEventListener("dblclick", () => {
+    const currentValue = healthMaxInput.value || String(BASE_HEALTH);
+    const next = prompt("Set maximum HP", currentValue);
+    if (next == null) return;
+
+    const trimmed = next.trim();
+    if (trimmed === "") {
+      sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = "";
+      updateDerivedCharacterVitals();
+      clampHealthFields();
+      saveSheetStateToStorage();
+      return;
+    }
+
+    const parsed = parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      alert("Maximum HP must be 0 or higher.");
+      return;
+    }
+
+    sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = String(parsed);
+    updateDerivedCharacterVitals();
+    clampHealthFields();
+    saveSheetStateToStorage();
+  });
 }
 
 function renderBasicGearTags() {
@@ -4661,6 +4692,7 @@ function saveSheetStateToStorage() {
     });
     globals.image = sheetState.globals?.image || "";
     globals[MENTAL_MAX_KEY] = String(getMentalMax());
+    globals[HEALTH_MAX_OVERRIDE_KEY] = sheetState.globals?.[HEALTH_MAX_OVERRIDE_KEY] ?? "";
     globals[ATTRIBUTE_MAX_POINTS_KEY] = String(getAttributeMaxPoints());
     globals[GENERAL_ABILITY_MAX_POINTS_KEY] = String(getGeneralAbilityMaxPoints());
     globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(getExtraSkillMaxPoints());

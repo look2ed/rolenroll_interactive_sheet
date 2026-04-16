@@ -14,7 +14,7 @@
 
     gtag('config', 'G-ZG63L28DHG');
   </script>
-  <link rel="stylesheet" href="style.css?v=5.4.0">
+  <link rel="stylesheet" href="style.css?v=5.4.6">
 </head>
 <body>
   <header class="page-header">
@@ -63,9 +63,9 @@
         aria-haspopup="dialog"
         aria-controls="contact-modal"
       >
-        💌
+        📧
       </button>
-      <div class="version-badge">v5.4.0</div>
+      <div class="version-badge">v5.4.6</div>
     </div>
   </header>
 
@@ -760,7 +760,14 @@
                   <label>Health</label>
                   <input type="number" id="char-health" min="0" value="10">
                   <span>/</span>
-                  <input type="number" id="char-health-max" min="0" value="10" readonly>
+                  <input
+                    type="number"
+                    id="char-health-max"
+                    min="0"
+                    value="10"
+                    readonly
+                    data-tooltip="Double click to set max HP."
+                  >
                 </div>
                 <div class="sheet-row">
                   <label for="char-defense">Defense</label>
@@ -776,7 +783,7 @@
                 </div>
                 <div class="sheet-row">
                   <label>Will Power</label>
-                  <input type="number" id="char-willpower" min="0" value="8" readonly>
+                  <input type="number" id="char-willpower" min="0" value="8">
                 </div>
                 <div class="sheet-row mental-row">
                   <label>Mental</label>
@@ -2154,6 +2161,6 @@
     </p>
   </footer>
 
-  <script src="dice.js?v=5.4.0"></script>
+  <script src="dice.js?v=5.4.6"></script>
 </body>
 </html>

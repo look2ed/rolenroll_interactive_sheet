@@ -376,18 +376,16 @@ code {
 }
 
 .inventory-stack {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 0.68fr);
   gap: 1rem;
-  height: 100%;
+  height: 465px;
   min-height: 0;
 }
 
 .inventory-stack .items-panel {
-  flex: 0 0 345px;
   display: grid;
   min-height: 0;
-  max-height: 345px;
 }
 
 .inventory-stack .items-panel .items-block {
@@ -397,15 +395,13 @@ code {
 }
 
 .inventory-stack .items-panel .item-list {
-  max-height: 245px;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .inventory-stack .notes-panel {
-  flex: 0 0 220px;
   display: grid;
-  min-height: 220px;
-  max-height: 220px;
+  min-height: 0;
 }
 
 .notes-block {
@@ -1219,9 +1215,23 @@ body.dice-drawer-open .dice-panel {
   width: 100%;
 }
 
+input[type="number"][readonly] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"][readonly]::-webkit-outer-spin-button,
+input[type="number"][readonly]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .sheet-row:has(#char-level):not(.sheet-row-identity),
 .sheet-row:has(#char-health) {
-  grid-template-columns: minmax(92px, auto) minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr) auto minmax(0, 1fr) auto;
+}
+
+#char-health-max[readonly] {
+  cursor: pointer;
 }
 
 .sheet-row:has(#char-willpower) {
