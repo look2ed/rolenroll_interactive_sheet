@@ -249,15 +249,40 @@ function setupV5Layout() {
 }
 
 function openPrintTemplate() {
-  const printWindow = window.open("", "_blank", "width=1180,height=900");
-  if (!printWindow) {
-    alert("Unable to open the print window. Please allow pop-ups for this site.");
+  const existingFrame = document.getElementById("print-template-frame");
+  if (existingFrame) existingFrame.remove();
+
+  const printFrame = document.createElement("iframe");
+  printFrame.id = "print-template-frame";
+  printFrame.setAttribute("aria-hidden", "true");
+  printFrame.style.position = "fixed";
+  printFrame.style.width = "0";
+  printFrame.style.height = "0";
+  printFrame.style.border = "0";
+  printFrame.style.right = "0";
+  printFrame.style.bottom = "0";
+
+  document.body.appendChild(printFrame);
+
+  const frameWindow = printFrame.contentWindow;
+  if (!frameWindow) {
+    printFrame.remove();
+    alert("Unable to prepare the print template.");
     return;
   }
 
-  printWindow.document.write(buildPrintDocument());
-  printWindow.document.close();
-  printWindow.focus();
+  frameWindow.document.open();
+  frameWindow.document.write(buildPrintDocument());
+  frameWindow.document.close();
+
+  const cleanup = () => {
+    window.removeEventListener("afterprint", cleanup);
+    setTimeout(() => {
+      if (printFrame.parentNode) printFrame.remove();
+    }, 100);
+  };
+
+  window.addEventListener("afterprint", cleanup, { once: true });
 }
 
 function buildPrintDocument() {
@@ -273,7 +298,10 @@ function buildPrintDocument() {
       ${buildPrintContent()}
       <script>
         window.addEventListener("load", () => {
-          setTimeout(() => window.print(), 120);
+          setTimeout(() => {
+            window.focus();
+            window.print();
+          }, 120);
         });
       </script>
     </body>
