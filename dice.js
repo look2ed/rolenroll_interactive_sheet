@@ -28,7 +28,6 @@ const DEFAULT_HEART_COUNT = 12;
 const MAX_HEART_COUNT = 18;
 const MENTAL_MAX_KEY = "mentalMax";
 const BASE_HEALTH = 10;
-const HEALTH_MAX_OVERRIDE_KEY = "healthMaxOverride";
 const BASE_WILL_POWER = 8;
 const ATTRIBUTE_STARTING_POINTS = 9;
 const ATTRIBUTE_DEFAULT_MAX_POINTS = 9;
@@ -1276,7 +1275,6 @@ function createDefaultSheetPayload(name = "") {
       background: "",
       image: "",
       [MENTAL_MAX_KEY]: String(DEFAULT_HEART_COUNT),
-      [HEALTH_MAX_OVERRIDE_KEY]: "",
       [ATTRIBUTE_MAX_POINTS_KEY]: String(ATTRIBUTE_DEFAULT_MAX_POINTS),
       [GENERAL_ABILITY_MAX_POINTS_KEY]: String(GENERAL_ABILITY_STARTING_POINTS),
       [EXTRA_SKILL_MAX_POINTS_KEY]: String(EXTRA_SKILL_STARTING_POINTS)
@@ -1598,7 +1596,9 @@ function applySheetStateToUI() {
   renderSheetTabs();
   updateDeleteCharacterButton();
 
+  if (sheetState.globals?.healthMax) {
   saveSheetStateToStorage();
+  }
 }
 
 function switchToSheet(sheetId) {
@@ -4751,7 +4751,6 @@ function saveSheetStateToStorage() {
     });
     globals.image = sheetState.globals?.image || "";
     globals[MENTAL_MAX_KEY] = String(getMentalMax());
-    globals[HEALTH_MAX_OVERRIDE_KEY] = sheetState.globals?.[HEALTH_MAX_OVERRIDE_KEY] ?? "";
     globals[ATTRIBUTE_MAX_POINTS_KEY] = String(getAttributeMaxPoints());
     globals[GENERAL_ABILITY_MAX_POINTS_KEY] = String(getGeneralAbilityMaxPoints());
     globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(getExtraSkillMaxPoints());
