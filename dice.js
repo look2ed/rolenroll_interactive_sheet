@@ -1236,12 +1236,12 @@ function getNormalizedHeartState() {
 }
 
 function getCurrentMentalValue() {
-  const hearts = document.querySelectorAll(".mental-heart");
+  const hearts = getNormalizedHeartState();
   const mentalMax = getMentalMax();
 
-  return Array.from(hearts)
+  return hearts
     .slice(0, mentalMax)
-    .filter((heart) => heart.classList.contains("filled"))
+    .filter(Boolean)
     .length;
 }
 
@@ -1594,7 +1594,7 @@ function applySheetStateToUI() {
   renderNotePanel();
   renderExtraSkillList();
   applyCharacterImageFromState();
-  // updateDerivedCharacterVitals();
+  updateDerivedCharacterVitals();
   renderSheetTabs();
   updateDeleteCharacterButton();
 }
@@ -4465,6 +4465,12 @@ function setupMentalHearts() {
     }
 
     btn.addEventListener("click", () => {
+      const heartElements = document.querySelectorAll(".mental-heart");
+      heartElements.forEach((heart, index) => {
+        sheetState.hearts[index] = heart.classList.contains("filled");
+      });
+
+      saveSheetStateToStorage();
       if (btn.classList.contains("on")) {
         btn.classList.remove("on");
         btn.classList.add("off");
