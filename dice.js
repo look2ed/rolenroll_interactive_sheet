@@ -660,8 +660,28 @@ function setupSheetRollModal() {
     const total = modal.querySelector("#sheet-roll-total")?.value || pendingSheetRoll.total;
     const success = modal.querySelector("#sheet-roll-success")?.value || pendingSheetRoll.success;
     const penalty = modal.querySelector("#sheet-roll-penalty")?.value || pendingSheetRoll.penalty;
-    const specialStr = modal.querySelector("#sheet-roll-special")?.value ?? pendingSheetRoll.specialStr ?? "";
+    let specialStr = modal.querySelector("#sheet-roll-special")?.value ?? pendingSheetRoll.specialStr ?? "";
+    
+    if (!sheetRollIgnoreMentalPenalty) {
+      const penaltyFaces = getMentalPenaltyFaces();
 
+      if (penaltyFaces > 0) {
+        let parsed = [];
+
+        try {
+          parsed = specialStr ? JSON.parse(specialStr) : [];
+        } catch {
+          parsed = [];
+        }
+
+        parsed.push({
+          kind: "neg",
+          minusCount: penaltyFaces
+        });
+
+        specialStr = JSON.stringify(parsed);
+      }
+    }
     performRoll({
       total,
       specialStr,
