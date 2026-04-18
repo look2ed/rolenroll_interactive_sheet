@@ -69,6 +69,39 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1) Load saved sheet state FIRST (so attrs/skills are ready)
   loadSheetStateFromStorage();
 
+  function setupGlobalFieldPersistence() {
+  // Map of UI IDs to the sheetState.globals keys
+  const fieldMapping = {
+    'char-name': 'name',
+    'char-level': 'level',
+    'char-exp': 'exp',
+    'char-exp-max': 'expMax',
+    'char-health': 'health',
+    'char-health-max': 'healthMax',
+    'char-defense': 'defense',
+    'char-willpower': 'will',
+    'char-gender': 'gender',
+    'char-age': 'age',
+    'char-race': 'race',
+    'char-will-source': 'willSource',
+    'char-background': 'background'
+  };
+
+  Object.entries(fieldMapping).forEach(([elementId, stateKey]) => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      const saveValue = () => {
+        sheetState.globals[stateKey] = el.value;
+        saveSheetStateToStorage();
+      };
+      
+      // Listen for typing (input) and finishing (change/blur)
+      el.addEventListener("input", saveValue);
+      el.addEventListener("change", saveValue);
+    }
+  });
+}
+
   // 2) Form submit
   const form = document.getElementById("dice-form");
   if (form) form.addEventListener("submit", onSubmit);
