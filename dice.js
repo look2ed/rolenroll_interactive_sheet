@@ -42,6 +42,22 @@ const CONTACT_ENDPOINT = "https://formspree.io/f/xdayayrq";
 let currentSheetId = "";
 let sheetDirectory = [];
 
+function addDoubleTapListener(element, callback, delay = 300) {
+  let lastTap = 0;
+
+  element.addEventListener("touchend", (event) => {
+    const now = Date.now();
+    const timeSince = now - lastTap;
+
+    if (timeSince > 0 && timeSince < delay) {
+      event.preventDefault(); // prevent zoom
+      callback(event);
+    }
+
+    lastTap = now;
+  });
+}
+
 // central sheet state
 const sheetState = {
   attrs: {},   // e.g. { str: 3, dex: 2, int: 4, ... }
@@ -116,21 +132,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // default language = TH
   setLang("th");
 
-  function addDoubleTapListener(element, callback, delay = 300) {
-  let lastTap = 0;
-
-  element.addEventListener("touchend", (event) => {
-    const now = Date.now();
-    const timeSince = now - lastTap;
-
-    if (timeSince > 0 && timeSince < delay) {
-      event.preventDefault(); // prevent zoom
-      callback(event);
-    }
-
-    lastTap = now;
-  });
-}
 
   // 5) History panel toggle
   const historyBtn = document.getElementById("history-toggle");

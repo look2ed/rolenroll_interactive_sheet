@@ -1012,9 +1012,9 @@ body.dice-drawer-open .dice-panel {
 
 .character-info-panel {
   min-width: 0;
-  height: 330px;
-  max-height: 330px;
-  overflow-y: auto;
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
   padding-right: 0.2rem;
 }
 
@@ -1489,9 +1489,9 @@ input[type="number"][readonly]::-webkit-inner-spin-button {
   grid-template-columns: minmax(620px, 1.35fr) minmax(300px, 0.65fr);
   gap: 0.9rem;
   align-items: start;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .profile-summary {
@@ -2915,6 +2915,16 @@ input[type="number"][readonly]::-webkit-inner-spin-button {
   .sheet-roll-number-row,
   .dependency-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .character-info-panel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .profile-panel {
+    overflow: visible;
   }
 }
 
