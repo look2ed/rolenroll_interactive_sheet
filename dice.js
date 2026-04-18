@@ -4834,6 +4834,15 @@ function loadSheetStateFromStorage() {
       ...createDefaultSheetPayload("").globals,
       ...(data.globals || {})
     };
+    // 🔥 Ensure HP is always preserved after load
+    if (!sheetState.globals.health || sheetState.globals.health === "") {
+      sheetState.globals.health =
+        sheetState.globals.healthMax || String(BASE_HEALTH);
+    }
+
+    if (!sheetState.globals.healthMax || sheetState.globals.healthMax === "") {
+      sheetState.globals.healthMax = String(BASE_HEALTH);
+    }
     migrateLegacyExpGlobals(sheetState.globals);
     migrateLegacyProfileGlobals(sheetState.globals);
     sheetState.equipment = Array.isArray(data.equipment) ? data.equipment : [];
