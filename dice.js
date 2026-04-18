@@ -4825,6 +4825,7 @@ function loadSheetStateFromStorage() {
       sheetState.hearts = fallback.hearts;
       sheetState.globals = fallback.globals;
       sheetState.note = fallback.note;
+      applyMentalHeartsToUI();
       return;
     }
 
@@ -4840,9 +4841,10 @@ function loadSheetStateFromStorage() {
     if (data.successChecks && typeof data.successChecks === "object") {
       Object.assign(sheetState.successChecks, data.successChecks);
     }
-    sheetState.hearts = Array.isArray(data.hearts) ? data.hearts : getDefaultHearts();
-    // 🔥 Ensure hearts always initialized AFTER loading data
-    if (!Array.isArray(sheetState.hearts) || sheetState.hearts.length === 0) {
+    // 🔥 Load hearts safely (preserve saved data)
+    if (Array.isArray(data.hearts) && data.hearts.length > 0) {
+      sheetState.hearts = data.hearts;
+    } else {
       sheetState.hearts = getDefaultHearts();
     }
     sheetState.globals = {
