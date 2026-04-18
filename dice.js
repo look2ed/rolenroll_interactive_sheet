@@ -4974,12 +4974,29 @@ function clampNumberPair(currentId, maxId) {
 }
 
 function clampExpFields() {
-  clampNumberPair("char-exp", "char-exp-max");
+  const expInput = document.getElementById("char-exp");
+  const expMaxInput = document.getElementById("char-exp-max");
+
+  if (!expInput || !expMaxInput) return;
+
+  let exp = parseInt(expInput.value || "0", 10);
+  let expMax = parseInt(expMaxInput.value || "0", 10);
+
+  if (!Number.isFinite(exp)) exp = 0;
+  if (!Number.isFinite(expMax) || expMax < 0) expMax = 0;
+
+  if (expMax > 0 && exp > expMax) {
+    exp = expMax;
+  }
+
+  expInput.value = String(exp);
+  expMaxInput.value = String(expMax);
+
+  if (!sheetState.globals) sheetState.globals = {};
+  sheetState.globals.exp = String(exp);
+  sheetState.globals.expMax = String(expMax);
 }
 
-// function clampHealthFields() {
-//   clampNumberPair("char-health", "char-health-max");
-// }
 
 function setupBoundedPairFields() {
   [
