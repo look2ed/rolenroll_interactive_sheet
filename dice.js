@@ -2427,28 +2427,29 @@ function updateDerivedCharacterVitals() {
   const healthInput = document.getElementById("char-health");
   const healthMaxInput = document.getElementById("char-health-max");
 
-  // ✅ Use stored max HP ONLY
-  const parsedMax = parseInt(sheetState.globals?.healthMax ?? "", 10);
-  const safeHealthMax =
-    Number.isFinite(parsedMax) && parsedMax > 0
-      ? parsedMax
-      : BASE_HEALTH;
+  if (!healthInput || !healthMaxInput) return;
 
-  if (healthInput && healthMaxInput) {
-    // ✅ Use stored current HP ONLY
-    const storedCurrent = parseInt(sheetState.globals?.health ?? "", 10);
+  let current = parseInt(healthInput.value || "0", 10);
+  let max = parseInt(healthMaxInput.value || String(BASE_HEALTH), 10);
 
-    let nextCurrent = Number.isFinite(storedCurrent)
-      ? storedCurrent
-      : safeHealthMax;
-
-    if (nextCurrent > safeHealthMax) {
-      nextCurrent = safeHealthMax;
-    }
-
-    healthMaxInput.value = String(safeHealthMax);
-    healthInput.value = String(nextCurrent);
+  if (!Number.isFinite(max) || max <= 0) {
+    max = BASE_HEALTH;
   }
+
+  if (!Number.isFinite(current) || current < 0) {
+    current = 0;
+  }
+
+  if (current > max) {
+    current = max;
+  }
+
+  healthMaxInput.value = String(max);
+  healthInput.value = String(current);
+
+  if (!sheetState.globals) sheetState.globals = {};
+  sheetState.globals.health = String(current);
+  sheetState.globals.healthMax = String(max);
 }
 
 
@@ -4919,7 +4920,7 @@ function setupGlobalFieldPersistence() {
       sheetState.globals.healthMax = document.getElementById("char-health-max")?.value ?? "0";
     }
       if (key === "will") {
-        updateDerivedCharacterVitals();
+        //updateDerivedCharacterVitals();
       }
       saveSheetStateToStorage();
     });
