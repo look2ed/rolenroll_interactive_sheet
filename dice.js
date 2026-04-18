@@ -4749,7 +4749,6 @@ function saveSheetStateToStorage() {
     if (!currentSheetId) return;
     clampExpFields();
     updateDerivedDefenseFromGear();
-    updateDerivedCharacterVitals();
     clampHealthFields();
 
     const hearts = Array.from(document.querySelectorAll(".mental-heart")).map(
