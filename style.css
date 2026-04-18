@@ -1215,24 +1215,12 @@ body.dice-drawer-open .dice-panel {
   width: 100%;
 }
 
-input[type="number"][readonly] {
-  -moz-appearance: textfield;
-}
-
-input[type="number"][readonly]::-webkit-outer-spin-button,
-input[type="number"][readonly]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
 
 .sheet-row:has(#char-level):not(.sheet-row-identity),
 .sheet-row:has(#char-health) {
   grid-template-columns: minmax(92px, auto) minmax(0, 1fr) auto minmax(0, 1fr) auto;
 }
 
-#char-health-max[readonly] {
-  cursor: pointer;
-}
 
 .sheet-row:has(#char-willpower) {
   grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
@@ -1403,6 +1391,12 @@ input[type="number"][readonly]::-webkit-inner-spin-button {
   font-size: 0.8rem;
   font-weight: 900;
   line-height: 1.15;
+}
+
+/* 🔥 Hide edit buttons completely (revert to click tag to edit) */
+.basic-gear-edit-btn,
+.status-tag-edit-btn {
+  display: none !important;
 }
 
 .basic-gear-roll-btn {
@@ -3031,4 +3025,21 @@ input[type="number"][readonly]::-webkit-inner-spin-button {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+}
+
+
+.number-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.number-control button {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 900;
 }

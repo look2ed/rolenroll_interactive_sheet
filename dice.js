@@ -42,21 +42,7 @@ const CONTACT_ENDPOINT = "https://formspree.io/f/xdayayrq";
 let currentSheetId = "";
 let sheetDirectory = [];
 
-function addDoubleTapListener(element, callback, delay = 300) {
-  let lastTap = 0;
 
-  element.addEventListener("touchend", (event) => {
-    const now = Date.now();
-    const timeSince = now - lastTap;
-
-    if (timeSince > 0 && timeSince < delay) {
-      event.preventDefault(); // prevent zoom
-      callback(event);
-    }
-
-    lastTap = now;
-  });
-}
 
 // central sheet state
 const sheetState = {
@@ -170,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNotes();
 
   // 13.5) Editable max HP field
-  setupHealthMaxField();
+  // setupHealthMaxField();
 
   // 14) Extra skill block and modal
   setupExtraSkills();
@@ -420,11 +406,11 @@ function setupProgressionTabs(card, extraSkillPanel) {
       <strong id="attribute-max-points">${ATTRIBUTE_DEFAULT_MAX_POINTS}</strong>
       <button
         type="button"
-        class="inline-help-icon attribute-points-help"
-        data-tooltip="Double click to modify maximum Attribute points."
-        aria-label="Attribute points help"
+        class="inline-help-icon attribute-points-edit"
+        data-tooltip="Click to edit maximum Attribute points."
+        aria-label="Edit Attribute points"
       >
-        ?
+        ✎
       </button>
     </div>
   `);
@@ -450,11 +436,11 @@ function setupProgressionTabs(card, extraSkillPanel) {
       <strong id="general-ability-max-points">${GENERAL_ABILITY_STARTING_POINTS}</strong>
       <button
         type="button"
-        class="inline-help-icon attribute-points-help"
-        data-tooltip="Double click to modify maximum General Ability points."
-        aria-label="General Ability points help"
+        class="inline-help-icon attribute-points-edit"
+        data-tooltip="Click to edit maximum General Ability points."
+        aria-label="Edit General Ability points"
       >
-        ?
+        ✎
       </button>
     </div>
   `;
@@ -578,7 +564,10 @@ function updateAttributeRemainingDisplay() {
 
 function setupAttributePointsBox(box) {
   if (!box) return;
-  box.addEventListener("dblclick", () => {
+  const editBtn = box.querySelector(".attribute-points-edit");
+  if (!editBtn) return;
+
+  editBtn.addEventListener("click", () => {
     const spent = getSpentAttributePoints();
     const currentMax = getAttributeMaxPoints();
     const next = prompt("Set maximum Attribute points:", String(currentMax));
@@ -624,7 +613,10 @@ function updateGeneralAbilityRemainingDisplay() {
 
 function setupGeneralAbilityPointsBox(box) {
   if (!box) return;
-  box.addEventListener("dblclick", () => {
+  const editBtn = box.querySelector(".attribute-points-edit");
+  if (!editBtn) return;
+
+  editBtn.addEventListener("click", () => {
     const spent = getSpentGeneralAbilityPoints();
     const currentMax = getGeneralAbilityMaxPoints();
     const next = prompt("Set maximum General Ability points:", String(currentMax));
@@ -968,7 +960,7 @@ function setupFloatingTooltips() {
     text.split("\n").forEach((line) => {
       const lineEl = document.createElement("div");
       lineEl.textContent = line;
-      if (line.trim().toLowerCase() === "double click to edit") {
+      if (line.trim().toLowerCase() === "click to edit") {
         lineEl.className = "floating-tooltip-action";
       }
       tooltip.append(lineEl);
@@ -1549,7 +1541,7 @@ function applySheetStateToUI() {
     el.value = sheetState.globals?.[key] != null ? sheetState.globals[key] : fallback;
   });
   clampExpFields();
-  clampHealthFields();
+  // clampHealthFields();
 
   applyMentalHeartsToUI();
 
@@ -1576,7 +1568,7 @@ function applySheetStateToUI() {
   renderNotePanel();
   renderExtraSkillList();
   applyCharacterImageFromState();
-  updateDerivedCharacterVitals();
+  // updateDerivedCharacterVitals();
   renderSheetTabs();
   updateDeleteCharacterButton();
 }
@@ -1692,7 +1684,10 @@ function setupEquipment() {
     toggle.addEventListener("change", () => updateEquipmentStatOption(toggle.dataset.equipmentStatToggle));
   });
 
-  form.addEventListener("submit", onEquipmentSubmit);
+  // FIX: Ensure form exists before adding listener
+  if (form) {
+    form.addEventListener("submit", onEquipmentSubmit);
+  }
 
   if (equipmentBlock) {
     equipmentBlock.addEventListener("click", (event) => {
@@ -1750,34 +1745,25 @@ function setupEquipment() {
 
   if (basicGearTags) {
     basicGearTags.addEventListener("click", (event) => {
+
+      // 🎲 PRIORITY: Roll button
       const rollBtn = event.target.closest("button[data-basic-equipment-roll-id]");
-      if (!rollBtn) return;
-      event.stopPropagation();
+      if (rollBtn) {
+        event.stopPropagation();
+        const item = sheetState.equipment.find(
+          (entry) => entry.id === rollBtn.dataset.basicEquipmentRollId
+        );
+        if (item) rollEquipment(item);
+        return;
+      }
 
-      const item = sheetState.equipment.find((entry) => entry.id === rollBtn.dataset.basicEquipmentRollId);
-      if (item) rollEquipment(item);
-    });
-
-    // ===== Desktop: dblclick =====
-    basicGearTags.addEventListener("dblclick", (event) => {
-      if (event.target.closest("button[data-basic-equipment-roll-id]")) return;
-
+      // ✏️ Click anywhere on tag → edit
       const tag = event.target.closest("[data-basic-equipment-id]");
       if (!tag) return;
 
-      const item = sheetState.equipment.find((entry) => entry.id === tag.dataset.basicEquipmentId);
-      if (item) openEquipmentModal(item);
-    });
-
-
-    // ===== Mobile: double-tap fallback =====
-    addDoubleTapListener(basicGearTags, (event) => {
-      if (event.target.closest("button[data-basic-equipment-roll-id]")) return;
-
-      const tag = event.target.closest("[data-basic-equipment-id]");
-      if (!tag) return;
-
-      const item = sheetState.equipment.find((entry) => entry.id === tag.dataset.basicEquipmentId);
+      const item = sheetState.equipment.find(
+        (entry) => entry.id === tag.dataset.basicEquipmentId
+      );
       if (item) openEquipmentModal(item);
     });
   }
@@ -2395,8 +2381,9 @@ function updateDerivedCharacterVitals() {
 
   const defaultHealthMax = BASE_HEALTH;
   const overrideHealthMax = parseInt(sheetState.globals?.[HEALTH_MAX_OVERRIDE_KEY] ?? "", 10);
-  const nextHealthMax = Number.isFinite(overrideHealthMax) && overrideHealthMax >= 0
-    ? overrideHealthMax
+  const inputMax = parseInt(healthMaxInput.value || "0", 10);
+  const nextHealthMax = Number.isFinite(inputMax) && inputMax >= 0
+    ? inputMax
     : defaultHealthMax;
 
   if (healthInput && healthMaxInput) {
@@ -2407,7 +2394,12 @@ function updateDerivedCharacterVitals() {
       ? previousCurrent
       : safePreviousMax;
     const missingHealth = Math.max(0, safePreviousMax - safePreviousCurrent);
-    const nextCurrent = Math.max(0, nextHealthMax - missingHealth);
+    let nextCurrent = safePreviousCurrent;
+
+    // Only clamp if current > max
+    if (nextCurrent > nextHealthMax) {
+      nextCurrent = nextHealthMax;
+    }
 
     healthMaxInput.value = String(nextHealthMax);
     healthInput.value = String(nextCurrent);
@@ -2418,37 +2410,37 @@ function updateDerivedCharacterVitals() {
   }
 }
 
-function setupHealthMaxField() {
-  const healthMaxInput = document.getElementById("char-health-max");
-  if (!healthMaxInput || healthMaxInput.dataset.ready === "true") return;
+// function setupHealthMaxField() {
+//   const healthMaxInput = document.getElementById("char-health-max");
+//   if (!healthMaxInput || healthMaxInput.dataset.ready === "true") return;
 
-  healthMaxInput.dataset.ready = "true";
-  healthMaxInput.addEventListener("dblclick", () => {
-    const currentValue = healthMaxInput.value || String(BASE_HEALTH);
-    const next = prompt("Set maximum HP", currentValue);
-    if (next == null) return;
+//   healthMaxInput.dataset.ready = "true";
+//   healthMaxInput.addEventListener("dblclick", () => {
+//     const currentValue = healthMaxInput.value || String(BASE_HEALTH);
+//     const next = prompt("Set maximum HP", currentValue);
+//     if (next == null) return;
 
-    const trimmed = next.trim();
-    if (trimmed === "") {
-      sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = "";
-      updateDerivedCharacterVitals();
-      clampHealthFields();
-      saveSheetStateToStorage();
-      return;
-    }
+//     const trimmed = next.trim();
+//     if (trimmed === "") {
+//       sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = "";
+//       updateDerivedCharacterVitals();
+//       clampHealthFields();
+//       saveSheetStateToStorage();
+//       return;
+//     }
 
-    const parsed = parseInt(trimmed, 10);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      alert("Maximum HP must be 0 or higher.");
-      return;
-    }
+//     const parsed = parseInt(trimmed, 10);
+//     if (!Number.isFinite(parsed) || parsed < 0) {
+//       alert("Maximum HP must be 0 or higher.");
+//       return;
+//     }
 
-    sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = String(parsed);
-    updateDerivedCharacterVitals();
-    clampHealthFields();
-    saveSheetStateToStorage();
-  });
-}
+//     sheetState.globals[HEALTH_MAX_OVERRIDE_KEY] = String(parsed);
+//     updateDerivedCharacterVitals();
+//     clampHealthFields();
+//     saveSheetStateToStorage();
+//   });
+// }
 
 function renderBasicGearTags() {
   const container = document.getElementById("basic-gear-tags");
@@ -2476,25 +2468,37 @@ function renderBasicGearTags() {
       slotLabel,
       stats,
       item.description || "",
-      "Double click to edit"
+      "Click to edit"
     ].filter(Boolean).join("\n");
     const rollButton = isEquipmentRollable(item)
       ? `<button type="button" class="basic-gear-roll-btn" data-basic-equipment-roll-id="${escapeHtml(item.id || "")}" aria-label="Roll ${escapeHtml(item.name || "equipment")}">Roll</button>`
       : "";
     return `
-      <span
-        class="basic-gear-tag"
-        data-basic-equipment-id="${escapeHtml(item.id || "")}"
-        data-tooltip="${escapeHtml(tooltip)}"
-        role="button"
-        tabindex="0"
-        aria-label="${escapeHtml(`Double click to edit ${item.name || "equipment"}`)}"
+    <span
+      class="basic-gear-tag"
+      data-basic-equipment-id="${escapeHtml(item.id || "")}"
+      data-tooltip="${escapeHtml(tooltip)}"
+      role="button"
+      tabindex="0"
+    >
+      <span>${escapeHtml(item.name || "Equipment")}</span>
+      <span class="basic-status-turns">${escapeHtml(slotLabel)}</span>
+
+      ${item.slot === "wearing" && item.stats?.def 
+        ? `<span class="basic-status-turns">DEF ${escapeHtml(item.def || 0)}</span>` 
+        : ""}
+
+      ${rollButton}
+
+      <button
+        type="button"
+        class="basic-gear-edit-btn"
+        data-basic-equipment-edit-id="${escapeHtml(item.id || "")}"
+        aria-label="Edit ${escapeHtml(item.name || "equipment")}"
       >
-        <span>${escapeHtml(item.name || "Equipment")}</span>
-        <span class="basic-status-turns">${escapeHtml(slotLabel)}</span>
-        ${item.slot === "wearing" && item.stats?.def ? `<span class="basic-status-turns">DEF ${escapeHtml(item.def || 0)}</span>` : ""}
-        ${rollButton}
-      </span>
+        ✎
+      </button>
+    </span>
     `;
   }).join("");
 }
@@ -2597,7 +2601,7 @@ function setupStatuses() {
   });
 
   if (basicTags) {
-    basicTags.addEventListener("dblclick", (event) => {
+    basicTags.addEventListener("click", (event) => {
       const tag = event.target.closest("[data-basic-status-id]");
       if (!tag) return;
 
@@ -2936,7 +2940,7 @@ function getStatusDurationText(item) {
 
 function getStatusTooltipText(item) {
   const details = item.details ? `\n${item.details}` : "";
-  return `${getStatusTypeLabel(item.type)}\n${getStatusDurationText(item)}${details}\nDouble click to edit`;
+  return `${getStatusTypeLabel(item.type)}\n${getStatusDurationText(item)}${details}\nClick to edit`;
 }
 
 function updateStatusDurationFormVisibility() {
@@ -2977,27 +2981,38 @@ function setupItems() {
     backdrop.addEventListener("click", closeItemModal);
   }
 
-  form.addEventListener("submit", onItemSubmit);
+  // FIX: Ensure form exists before adding listener
+  if (form) {
+    form.addEventListener("submit", onItemSubmit);
+  }
 
   list.addEventListener("click", (event) => {
-    const actionBtn = event.target.closest("button[data-item-action]");
-    if (!actionBtn) return;
+  const actionBtn = event.target.closest("button[data-item-action]");
+  if (!actionBtn) return;
 
-    const id = actionBtn.dataset.id;
-    if (!id) return;
+  event.preventDefault(); // 🔥 important
 
-    if (actionBtn.dataset.itemAction === "edit") {
-      const item = sheetState.items.find((entry) => entry.id === id);
-      if (item) openItemModal(item);
-      return;
-    }
+  const id = actionBtn.dataset.id;
+  if (!id) return;
 
-    if (actionBtn.dataset.itemAction === "remove") {
-      removeItem(id);
-      return;
-    }
+  const action = actionBtn.dataset.itemAction;
 
-  });
+  if (action === "edit") {
+    const item = sheetState.items.find((entry) => entry.id === id);
+    if (item) openItemModal(item);
+    return;
+  }
+
+  if (action === "remove") {
+    if (!confirm("Remove this item?")) return;
+
+    sheetState.items = sheetState.items.filter((item) => item.id !== id);
+
+    renderItemList();
+    saveSheetStateToStorage();
+    return;
+  }
+});
 
   list.addEventListener("input", (event) => {
     const input = event.target.closest("input[data-item-amount-id]");
@@ -3110,11 +3125,12 @@ function onItemSubmit(event) {
   const name = nameInput.value.trim();
   if (!name) {
     alert("Please enter an item name.");
+    nameInput.focus();
     return;
   }
 
-  let amount = parseInt(amountInput?.value || "0", 10);
-  if (Number.isNaN(amount) || amount < 0) amount = 0;
+  let amount = parseInt(amountInput?.value || "1", 10);
+  if (Number.isNaN(amount) || amount < 0) amount = 1;
 
   const existingId = idInput?.value || "";
   const payload = {
@@ -3136,25 +3152,6 @@ function onItemSubmit(event) {
   closeItemModal();
 }
 
-function updateItemAmount(id, value) {
-  const item = sheetState.items.find((entry) => entry.id === id);
-  if (!item) return;
-
-  let amount = parseInt(value ?? "0", 10);
-  if (Number.isNaN(amount) || amount < 0) amount = 0;
-
-  item.amount = amount;
-  saveSheetStateToStorage();
-}
-
-function removeItem(id) {
-  if (!confirmRemove("Remove this item?")) return false;
-  sheetState.items = sheetState.items.filter((item) => item.id !== id);
-  saveSheetStateToStorage();
-  renderItemList();
-  return true;
-}
-
 function renderItemList() {
   const list = document.getElementById("item-list");
   if (!list) return;
@@ -3172,21 +3169,21 @@ function renderItemList() {
         <div class="item-main">
           <div class="equipment-item-info">
             <span class="equipment-name">${escapeHtml(item.name || "")}</span>
-          <div class="item-amount-row">
-            <span class="item-amount-label">Amount</span>
-            <span class="item-amount-control">
-              <input
-                type="number"
+            <div class="item-amount-row">
+              <span class="item-amount-label">Amount</span>
+              <span class="item-amount-control">
+                <input
+                  type="number"
                   min="0"
-                  value="${escapeHtml(item.amount ?? 0)}"
+                  value="${escapeHtml(String(item.amount ?? 1))}"
                   class="item-amount-input"
-                  data-item-amount-id="${item.id}"
+                  data-item-amount-id="${escapeHtml(item.id)}"
                   aria-label="Amount for ${escapeHtml(item.name || "item")}"
                 >
               </span>
               <div class="item-inline-actions">
-                <button type="button" class="icon-action-btn item-inline-btn" data-item-action="edit" data-id="${item.id}" aria-label="Edit ${escapeHtml(item.name || "item")}">✎</button>
-                <button type="button" class="icon-action-btn equipment-remove-btn item-inline-btn" data-item-action="remove" data-id="${item.id}" aria-label="Remove ${escapeHtml(item.name || "item")}">⌫</button>
+                <button type="button" class="icon-action-btn item-inline-btn" data-item-action="edit" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(item.name || "item")}">✎</button>
+                <button type="button" class="icon-action-btn equipment-remove-btn item-inline-btn" data-item-action="remove" data-id="${escapeHtml(item.id)}" aria-label="Remove ${escapeHtml(item.name || "item")}">⌫</button>
               </div>
             </div>
           </div>
@@ -3468,6 +3465,10 @@ function setupExtraSkills() {
 
   renderExtraSkillList();
   updateExtraSkillRemainingDisplay();
+
+  setupExtraSkillPointsBox(
+  document.getElementById("extra-skill-points-box")
+);
 }
 
 function openExtraSkillModal(item = null) {
@@ -3564,25 +3565,49 @@ function getExtraSkillMaxPoints() {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : EXTRA_SKILL_STARTING_POINTS;
 }
 
-function setupExtraSkillPointsBox() {
-  const box = document.getElementById("extra-skill-points-box");
-  if (!box || box.dataset.ready === "true") return;
+function setupExtraSkillPointsBox(box) {
+  if (!box) return;
 
-  box.dataset.ready = "true";
-  box.addEventListener("dblclick", () => {
-    const spent = getSpentExtraSkillPoints();
-    const currentMax = getExtraSkillMaxPoints();
+  const editBtn = box.querySelector(".attribute-points-edit");
+  if (!editBtn) return;
+
+  editBtn.addEventListener("click", () => {
+    // 🔥 calculate spent points
+    const spent = Array.isArray(sheetState.extraSkills)
+      ? sheetState.extraSkills.reduce((total, skill) => {
+          const value = parseInt(skill.points ?? "0", 10);
+          return total + (Number.isFinite(value) ? value : 0);
+        }, 0)
+      : 0;
+
+    // 🔥 get current max
+    const raw = sheetState.globals?.[EXTRA_SKILL_MAX_POINTS_KEY];
+    const currentMax = parseInt(raw ?? EXTRA_SKILL_STARTING_POINTS, 10);
+
+    // 🔥 prompt user
     const next = prompt("Set maximum Extra Skill points:", String(currentMax));
     if (next == null) return;
 
     const parsed = parseInt(next, 10);
+
+    // 🔥 validation
     if (!Number.isFinite(parsed) || parsed < spent) {
       alert(`Maximum Extra Skill points cannot be lower than points already spent (${spent}).`);
       return;
     }
 
+    // 🔥 save new max
     sheetState.globals[EXTRA_SKILL_MAX_POINTS_KEY] = String(parsed);
-    updateExtraSkillRemainingDisplay();
+
+    // 🔥 update UI immediately
+    const remaining = Math.max(0, parsed - spent);
+
+    const remainingEl = document.getElementById("extra-skill-remaining-points");
+    const maxEl = document.getElementById("extra-skill-max-points");
+
+    if (remainingEl) remainingEl.textContent = String(remaining);
+    if (maxEl) maxEl.textContent = String(parsed);
+
     saveSheetStateToStorage();
   });
 }
@@ -4920,9 +4945,9 @@ function clampExpFields() {
   clampNumberPair("char-exp", "char-exp-max");
 }
 
-function clampHealthFields() {
-  clampNumberPair("char-health", "char-health-max");
-}
+// function clampHealthFields() {
+//   clampNumberPair("char-health", "char-health-max");
+// }
 
 function setupBoundedPairFields() {
   [
