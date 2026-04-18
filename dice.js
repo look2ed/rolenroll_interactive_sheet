@@ -141,17 +141,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const healthMaxInput = document.getElementById("char-health-max");
 
   if (healthInput) {
-    healthInput.addEventListener("change", () => {
+    const saveCurrentHP = () => {
       sheetState.globals.health = healthInput.value;
       saveSheetStateToStorage();
-    });
+    };
+    healthInput.addEventListener("input", saveCurrentHP);
+    healthInput.addEventListener("change", saveCurrentHP);
+    healthInput.addEventListener("blur", saveCurrentHP);
   }
 
   if (healthMaxInput) {
-    healthMaxInput.addEventListener("change", () => {
+    const saveMaxHP = () => {
       sheetState.globals.healthMax = healthMaxInput.value;
       saveSheetStateToStorage();
-    });
+    };
+    healthMaxInput.addEventListener("input", saveMaxHP);
+    healthMaxInput.addEventListener("change", saveMaxHP);
+    healthMaxInput.addEventListener("blur", saveMaxHP);
   }
 
   // 8) Initial history render
