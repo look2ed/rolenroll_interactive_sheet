@@ -1238,7 +1238,7 @@ function getNormalizedHeartState() {
 function getCurrentMentalValue() {
   const mentalMax = getMentalMax();
   const hearts = getNormalizedHeartState();
-  return hearts.slice(0, mentalMax).filter(Boolean).length;
+  return hearts.slice(0, mentalMax).filter((h) => !h).length;
 }
 
 function getMentalDamage() {
