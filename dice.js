@@ -1534,7 +1534,7 @@ function resetSheetState() {
   Object.keys(sheetState.attrs).forEach((key) => delete sheetState.attrs[key]);
   Object.keys(sheetState.skills).forEach((key) => delete sheetState.skills[key]);
   Object.keys(sheetState.successChecks).forEach((key) => delete sheetState.successChecks[key]);
-  sheetState.hearts = [];
+  sheetState.hearts = getDefaultHearts();
   sheetState.globals = {};
   sheetState.equipment = [];
   sheetState.statuses = [];
@@ -2436,6 +2436,7 @@ function updateDerivedCharacterVitals() {
       sheetState.globals.healthMax = String(nextHealthMax);
     }
   }
+  saveSheetStateToStorage();
 }
 
 // function setupHealthMaxField() {
